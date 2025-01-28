@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Suivi des révisions</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="nav-bar">
+        <h1>Bienvenue {{ current_user.username }}</h1>
+        <div class="nav-links">
+            <a href="{{ url_for('exercices') }}" class="nav-link">Exercices</a>
+            <a href="{{ url_for('logout') }}" class="nav-link">Déconnexion</a>
+        </div>
+    </div>
+    
+    <div class="chart-container">
+        <canvas id="progressChart"></canvas>
+    </div>
+    
+    <script>
+        const ctx = document.getElementById('progressChart');
+        let progressChart;
+        
+        function updateChart(newData) {
+            if (progressChart) {
+                progressChart.data.datasets[0].data = newData;
+                progressChart.update('active');
+            }
+        }
+
+        // Initialisation du graphique
+        progressChart = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: ['Suites', 'Probabilités', 'Convexité', 'Intégrales', 
+                        'Géométrie dans l\'espace', 'Etudes de fonctions', 
+                        'Logarithme néperien', 'Exponentielle'],
+                datasets: [{
+                    label: 'Exercices complétés',
+                    data: {{ progress_data|tojson }},
+                    fill: true,
+                    backgroundColor: 'rgba(108, 92, 231, 0.2)',
+                    borderColor: 'rgb(108, 92, 231)',
+                    pointBackgroundColor: 'rgb(108, 92, 231)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgb(108, 92, 231)',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 10,
+                        ticks: { stepSize: 2 },
+                        grid: { color: 'rgba(0, 0, 0, 0.1)' },
+                        angleLines: { color: 'rgba(0, 0, 0, 0.1)' },
+                        pointLabels: {
+                            font: { size: 16, family: 'Poppins' }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            font: { size: 16, family: 'Poppins' }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Mettre à jour les données toutes les 2 secondes
+        setInterval(() => {
+            fetch('/get_progress')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.progress) {
+                        updateChart(data.progress);
+                    }
+                })
+                .catch(error => console.error('Erreur lors de la mise à jour:', error));
+        }, 2000);
+    </script>
+</body>
+</html> 

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Liste des exercices</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="nav-bar">
+        <h1>Exercices</h1>
+        <div class="nav-links">
+            <a href="{{ url_for('accueil') }}" class="nav-link">Accueil</a>
+            <a href="{{ url_for('logout') }}" class="nav-link">Déconnexion</a>
+        </div>
+    </div>
+
+    <div class="content-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Sujet</th>
+                    <th>Lien</th>
+                    <th>Exercice 1</th>
+                    <th>Exercice 2</th>
+                    <th>Exercice 3</th>
+                    <th>Exercice 4</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sujet in sujets %}
+                <tr>
+                    <td>{{ sujet.nom }}</td>
+                    <td>
+                        {% if sujet.lien %}
+                        <a href="{{ sujet.lien }}" target="_blank" class="btn-link">Voir le sujet</a>
+                        {% endif %}
+                    </td>
+                    {% for i in range(1, 5) %}
+                    <td>
+                        {% set exercice = sujet.exercices.get(i) %}
+                        {% if exercice %}
+                        <div class="exercice-item">
+                            <input type="checkbox" 
+                                   data-id="{{ exercice.id }}"
+                                   {% if exercice.complete %}checked{% endif %}
+                                   onclick="updateExercice(this)">
+                            <span class="exercice-themes">{{ exercice.themes }}</span>
+                        </div>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+    function updateExercice(element) {
+        const id = element.dataset.id;
+        const complete = element.checked;
+        const row = element.closest('tr');
+        
+        if (complete) {
+            // Créer le feu d'artifice
+            createFirework();
+            
+            // Messages d'encouragement aléatoires
+            const messages = [
+                "Bravo ! Continue comme ça ! 🌟",
+                "Excellent travail ! 🎉",
+                "Tu es sur la bonne voie ! 💪",
+                "Un pas de plus vers la réussite ! 🚀",
+                "Super progression ! 🌈",
+                "Tu gères ! 🏆",
+                "Continue sur ta lancée ! ⭐",
+                "Très bon travail ! 🎯"
+            ];
+            const message = messages[Math.floor(Math.random() * messages.length)];
+            
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        }
+        
+        // Animer la ligne
+        row.style.backgroundColor = complete ? 'rgba(0, 184, 148, 0.1)' : '';
+        
+        fetch('/update_exercice', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                id: parseInt(id),
+                complete: complete
+            })
+        }).then(response => response.json())
+          .then(data => {
+              if (data.success) {
+                  // Vérifier si l'annale est complétée
+                  const sujet = row.querySelector('td').textContent;
+                  fetch('/check_annale_complete', {
+                      method: 'POST',
+                      headers: {
+                          'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({ sujet: sujet })
+                  })
+                  .then(response => response.json())
+                  .then(data => {
+                      if (data.complete) {
+                          showAchievement(data.message);
+                      }
+                  });
+              }
+          });
+    }
+
+    function createFirework() {
+        const firework = document.createElement('div');
+        firework.className = 'firework';
+        document.body.appendChild(firework);
+        
+        // Créer les particules
+        for (let i = 0; i < 50; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            const angle = (i / 50) * 360;
+            const velocity = 2 + Math.random() * 2;
+            particle.style.setProperty('--angle', angle + 'deg');
+            particle.style.setProperty('--velocity', velocity);
+            particle.style.setProperty('--hue', Math.random() * 360);
+            firework.appendChild(particle);
+        }
+        
+        // Supprimer le feu d'artifice après l'animation
+        setTimeout(() => firework.remove(), 2000);
+    }
+
+    function showAchievement(message) {
+        const achievement = document.createElement('div');
+        achievement.className = 'achievement';
+        achievement.innerHTML = `
+            <div class="achievement-icon">🏆</div>
+            <div class="achievement-message">${message}</div>
+        `;
+        document.body.appendChild(achievement);
+        setTimeout(() => achievement.remove(), 5000);
+    }
+    </script>
+
+    <style>
+    .checkmark-animation {
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: var(--success-color);
+        animation: checkmark 0.8s ease-out forwards;
+    }
+
+    @keyframes checkmark {
+        0% { transform: scale(0); opacity: 1; }
+        100% { transform: scale(2); opacity: 0; }
+    }
+
+    .firework {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 0;
+        height: 0;
+        pointer-events: none;
+        z-index: 9999;
+    }
+
+    .particle {
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        transform-origin: center;
+        background: currentColor;
+        color: hsl(var(--hue), 100%, 75%);
+        animation: explode 2s ease-out forwards;
+        box-shadow: 0 0 10px currentColor;
+    }
+
+    @keyframes explode {
+        0% {
+            transform: rotate(var(--angle)) translateY(0) scale(1);
+            opacity: 1;
+        }
+        50% {
+            opacity: 1;
+        }
+        100% {
+            transform: rotate(var(--angle)) translateY(calc(var(--velocity) * 200px)) scale(0);
+            opacity: 0;
+        }
+    }
+
+    /* Ajout d'un effet de traînée */
+    .particle::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: inherit;
+        filter: blur(4px);
+        animation: trail 1s ease-out forwards;
+    }
+
+    @keyframes trail {
+        from { transform: scale(1); opacity: 1; }
+        to { transform: scale(3); opacity: 0; }
+    }
+
+    .notification {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        padding: 20px 40px;
+        background: linear-gradient(45deg, var(--primary-color), var(--hover-color));
+        color: white;
+        border-radius: 15px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        animation: popIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        font-size: 24px;
+        font-weight: 600;
+        text-align: center;
+        z-index: 1000;
+    }
+
+    @keyframes popIn {
+        0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+        50% { transform: translate(-50%, -50%) scale(1.2); }
+        100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+
+    .achievement {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(45deg, #ffd700, #ffa500);
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        animation: dropIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        z-index: 1000;
+    }
+
+    .achievement-icon {
+        font-size: 40px;
+    }
+
+    .achievement-message {
+        color: white;
+        font-size: 20px;
+        font-weight: 600;
+    }
+
+    @keyframes dropIn {
+        0% { transform: translateX(-50%) translateY(-100%); }
+        70% { transform: translateX(-50%) translateY(20px); }
+        100% { transform: translateX(-50%) translateY(0); }
+    }
+    </style>
+</body>
+</html> 

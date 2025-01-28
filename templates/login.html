@@ -6,18 +6,30 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <div class="auth-container">
+    <div class="login-container">
         <h1>Connexion</h1>
-        <form method="POST">
+        <form method="POST" action="{{ url_for('login') }}">
+            {{ form.csrf_token }}
             <div class="form-group">
-                <input type="text" name="username" placeholder="Nom d'utilisateur" required>
+                <label for="username">Nom d'utilisateur</label>
+                <input type="text" id="username" name="username" required>
             </div>
             <div class="form-group">
-                <input type="password" name="password" placeholder="Mot de passe" required>
+                <label for="password">Mot de passe</label>
+                <input type="password" id="password" name="password" required>
             </div>
-            <button type="submit" class="btn-gradient">Se connecter</button>
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-danger">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            <button type="submit" class="btn-primary">Se connecter</button>
         </form>
-        <p class="auth-link">Pas encore de compte ? <a href="{{ url_for('register') }}">S'inscrire</a></p>
+        <div class="register-link">
+            <p>Pas encore de compte ? <a href="{{ url_for('register') }}">S'inscrire</a></p>
+        </div>
     </div>
 </body>
 </html> 

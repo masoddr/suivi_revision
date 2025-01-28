@@ -3,14 +3,46 @@ from flask import Flask, render_template, jsonify, request, redirect, url_for, f
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_wtf.csrf import CSRFProtect
+from flask_talisman import Talisman
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, SubmitField
+from wtforms.validators import DataRequired, Length, ValidationError
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 app = Flask(__name__)
+
+# Configuration de base
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'revisions.db')
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'votre_clé_secrète_ici')
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(24).hex())
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Configuration de sécurité
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = 3600  # 1 heure
+
+# Initialisation des extensions
 db = SQLAlchemy(app)
+csrf = CSRFProtect(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
+
+# Configuration de Talisman (HTTPS et en-têtes de sécurité)
+csp = {
+    'default-src': "'self'",
+    'img-src': "'self' data: https:",
+    'script-src': "'self' 'unsafe-inline'",
+    'style-src': "'self' 'unsafe-inline' https://fonts.googleapis.com",
+    'font-src': "'self' https://fonts.gstatic.com",
+}
+
+Talisman(app,
+         force_https=True,
+         strict_transport_security=True,
+         session_cookie_secure=True,
+         content_security_policy=csp)
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -31,35 +63,52 @@ class Exercice(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+# Formulaires
+class LoginForm(FlaskForm):
+    username = StringField('Nom d\'utilisateur', validators=[DataRequired(), Length(min=3, max=80)])
+    password = PasswordField('Mot de passe', validators=[DataRequired()])
+    submit = SubmitField('Se connecter')
+
+class RegisterForm(FlaskForm):
+    username = StringField('Nom d\'utilisateur', validators=[DataRequired(), Length(min=3, max=80)])
+    password = PasswordField('Mot de passe', validators=[DataRequired(), Length(min=6)])
+    submit = SubmitField('S\'inscrire')
+
+    def validate_username(self, field):
+        if User.query.filter_by(username=field.data).first():
+            raise ValidationError('Ce nom d\'utilisateur est déjà pris.')
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        user = User.query.filter_by(username=username).first()
-        
-        if user and check_password_hash(user.password_hash, password):
+    if current_user.is_authenticated:
+        return redirect(url_for('accueil'))
+    
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(username=form.username.data).first()
+        if user and check_password_hash(user.password_hash, form.password.data):
             login_user(user)
-            return redirect(url_for('accueil'))
+            next_page = request.args.get('next')
+            return redirect(next_page if next_page else url_for('accueil'))
         flash('Identifiants invalides')
-    return render_template('login.html')
+    return render_template('login.html', form=form)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        
-        if User.query.filter_by(username=username).first():
-            flash('Nom d\'utilisateur déjà pris')
-            return redirect(url_for('register'))
-            
-        user = User(username=username, 
-                   password_hash=generate_password_hash(password))
+    if current_user.is_authenticated:
+        return redirect(url_for('accueil'))
+    
+    form = RegisterForm()
+    if form.validate_on_submit():
+        user = User(
+            username=form.username.data,
+            password_hash=generate_password_hash(form.password.data)
+        )
         db.session.add(user)
         db.session.commit()
+        flash('Inscription réussie ! Vous pouvez maintenant vous connecter.')
         return redirect(url_for('login'))
-    return render_template('register.html')
+    return render_template('register.html', form=form)
 
 @app.route('/logout')
 @login_required

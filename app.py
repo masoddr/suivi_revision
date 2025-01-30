@@ -144,6 +144,25 @@ def get_progress():
     progress_data = calculate_progress(current_user.id)
     return jsonify({'progress': progress_data})
 
+@app.route('/reset_progress', methods=['POST'])
+@login_required
+def reset_progress():
+    try:
+        # Récupérer tous les exercices de l'utilisateur connecté
+        user_exercises = Exercice.query.filter_by(user_id=current_user.id).all()
+        
+        # Mettre à jour le statut de tous les exercices à False
+        for exercise in user_exercises:
+            exercise.complete = False
+        
+        # Sauvegarder les modifications dans la base de données
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Progrès réinitialisés avec succès'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 def calculate_progress(user_id):
     themes = ['Suites', 'Probabilités', 'Convexité', 'Intégrales', 
              'Géométrie dans l\'espace', 'Etudes de fonctions', 

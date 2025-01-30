@@ -14,10 +14,27 @@
                 <span class="nav-icon">📊</span>
                 <span class="nav-text">Accueil</span>
             </a>
+            <button id="resetButton" class="nav-link">
+                <span class="nav-icon">🔄</span>
+                <span class="nav-text">Réinitialiser</span>
+            </button>
             <a href="{{ url_for('logout') }}" class="nav-link">
                 <span class="nav-icon">🚪</span>
                 <span class="nav-text">Déconnexion</span>
             </a>
+        </div>
+    </div>
+
+    <!-- Boîte de dialogue de confirmation -->
+    <div id="confirmDialog" class="confirm-dialog">
+        <div class="confirm-content">
+            <h2>⚠️ Confirmation</h2>
+            <p>Êtes-vous sûr de vouloir réinitialiser tous vos progrès ?</p>
+            <p class="warning-text">Cette action est irréversible !</p>
+            <div class="confirm-buttons">
+                <button id="cancelReset" class="cancel-button">Annuler</button>
+                <button id="confirmReset" class="confirm-button">Réinitialiser</button>
+            </div>
         </div>
     </div>
 
@@ -142,6 +159,13 @@
         }).then(response => response.json())
           .then(data => {
               if (data.success) {
+                  // Mettre à jour le graphique si on est sur la même page
+                  const progressChart = window.parent.progressChart;
+                  if (progressChart && data.progress) {
+                      progressChart.data.datasets[0].data = data.progress;
+                      progressChart.update('active');
+                  }
+                  
                   // Vérifier si l'annale est complétée
                   const sujet = row.querySelector('td').textContent;
                   fetch('/check_annale_complete', {
@@ -205,6 +229,79 @@
             exercicesList.style.maxHeight = exercicesList.scrollHeight + "px";
             toggleIcon.style.transform = 'rotate(180deg)';
         }
+    }
+
+    // Gestionnaires d'événements pour la réinitialisation
+    const resetButton = document.getElementById('resetButton');
+    const confirmDialog = document.getElementById('confirmDialog');
+    const cancelReset = document.getElementById('cancelReset');
+    const confirmReset = document.getElementById('confirmReset');
+
+    resetButton.addEventListener('click', () => {
+        confirmDialog.classList.add('show');
+    });
+
+    cancelReset.addEventListener('click', () => {
+        confirmDialog.classList.remove('show');
+    });
+
+    confirmReset.addEventListener('click', () => {
+        confirmDialog.classList.remove('show');
+        resetProgress();
+    });
+
+    // Fermer la boîte de dialogue en cliquant en dehors
+    confirmDialog.addEventListener('click', (e) => {
+        if (e.target === confirmDialog) {
+            confirmDialog.classList.remove('show');
+        }
+    });
+
+    // Fonction de réinitialisation
+    function resetProgress() {
+        fetch('/reset_progress', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Décocher toutes les cases à cocher
+                document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+                
+                // Afficher une notification de succès
+                showNotification("Réinitialisation effectuée avec succès !");
+                
+                // Mettre à jour les compteurs d'exercices
+                updateAllCounters();
+            } else {
+                showNotification("Erreur lors de la réinitialisation.", true);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showNotification("Erreur lors de la réinitialisation.", true);
+        });
+    }
+
+    // Fonction pour afficher une notification
+    function showNotification(message, isError = false) {
+        const notification = document.createElement('div');
+        notification.className = `notification ${isError ? 'error' : 'success'}`;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 3000);
+    }
+
+    // Fonction pour mettre à jour tous les compteurs
+    function updateAllCounters() {
+        document.querySelectorAll('.exercice-counter').forEach(counter => {
+            counter.textContent = '0';
+        });
     }
     </script>
 
@@ -351,15 +448,21 @@
         .nav-links {
             width: 100%;
             justify-content: center;
-            gap: 15px;
+            gap: 10px;
+            display: flex;
+            flex-wrap: wrap;
         }
 
         .nav-link {
             font-size: 14px;
-            padding: 10px 16px;
-            flex: 1;
-            justify-content: center;
-            max-width: 150px;
+            padding: 8px 12px;
+            flex: 0 1 auto;
+            min-width: 100px;
+            max-width: 130px;
+        }
+
+        .nav-text {
+            font-size: 13px;
         }
 
         /* Animation tactile pour mobile */
@@ -490,6 +593,7 @@
         position: relative;
         display: flex;
         align-items: center;
+        justify-content: center;
         gap: 8px;
         padding: 8px 16px;
         background: linear-gradient(45deg, var(--primary-color), var(--hover-color));
@@ -499,6 +603,8 @@
         transition: all 0.3s ease;
         overflow: hidden;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        min-width: 120px;
     }
 
     .nav-link::before {
@@ -527,17 +633,11 @@
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
-    .nav-icon {
-        font-size: 1.2em;
-        transition: transform 0.3s ease;
-    }
-
-    .nav-link:hover .nav-icon {
-        transform: scale(1.2);
-    }
-
     .nav-text {
         position: relative;
+        white-space: nowrap;
+        text-align: center;
+        flex: 0 0 auto;
     }
 
     .nav-text::after {
@@ -556,6 +656,110 @@
     .nav-link:hover .nav-text::after {
         transform: scaleX(1);
         transform-origin: left;
+    }
+
+    .nav-icon {
+        font-size: 1.2em;
+        transition: transform 0.3s ease;
+        flex: 0 0 auto;
+    }
+
+    .confirm-dialog {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+
+    .confirm-dialog.show {
+        display: flex;
+    }
+
+    .confirm-content {
+        background: white;
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        text-align: center;
+        max-width: 90%;
+        width: 400px;
+    }
+
+    .confirm-content h2 {
+        margin: 0 0 20px 0;
+        color: #ff6b6b;
+    }
+
+    .warning-text {
+        color: #ff6b6b;
+        font-weight: 600;
+        margin: 20px 0;
+    }
+
+    .confirm-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 25px;
+    }
+
+    .cancel-button, .confirm-button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-family: 'Poppins', sans-serif;
+        font-size: 14px;
+        transition: all 0.3s ease;
+    }
+
+    .cancel-button {
+        background: #f1f3f5;
+        color: #495057;
+    }
+
+    .confirm-button {
+        background: #ff6b6b;
+        color: white;
+    }
+
+    .cancel-button:hover, .confirm-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .notification {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 15px 30px;
+        border-radius: 12px;
+        color: white;
+        font-family: 'Poppins', sans-serif;
+        font-weight: 500;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        animation: slideIn 0.3s ease-out;
+        z-index: 1000;
+    }
+
+    .notification.success {
+        background: linear-gradient(45deg, #37b24d, #40c057);
+    }
+
+    .notification.error {
+        background: linear-gradient(45deg, #f03e3e, #ff6b6b);
+    }
+
+    @keyframes slideIn {
+        from { transform: translateX(-50%) translateY(-100%); opacity: 0; }
+        to { transform: translateX(-50%) translateY(0); opacity: 1; }
     }
     </style>
 </body>

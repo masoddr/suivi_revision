@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>Liste des exercices</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
@@ -14,7 +15,8 @@
         </div>
     </div>
 
-    <div class="content-container">
+    <!-- Version Desktop -->
+    <div class="content-container desktop-only">
         <table>
             <thead>
                 <tr>
@@ -53,6 +55,40 @@
                 {% endfor %}
             </tbody>
         </table>
+    </div>
+
+    <!-- Version Mobile -->
+    <div class="content-container mobile-only">
+        <div class="mobile-subjects">
+            {% for sujet in sujets %}
+            <div class="mobile-subject-card">
+                <div class="mobile-subject-header" onclick="toggleExercices(this)">
+                    <h3>{{ sujet.nom }}</h3>
+                    {% if sujet.lien %}
+                    <a href="{{ sujet.lien }}" target="_blank" class="btn-link mobile-btn">Voir le sujet</a>
+                    {% endif %}
+                    <div class="toggle-icon">▼</div>
+                </div>
+                <div class="mobile-exercices-list">
+                    {% for i in range(1, 5) %}
+                    {% set exercice = sujet.exercices.get(i) %}
+                    {% if exercice %}
+                    <div class="mobile-exercice-item">
+                        <div class="exercice-number">Exercice {{ i }}</div>
+                        <div class="exercice-item">
+                            <input type="checkbox" 
+                                   data-id="{{ exercice.id }}"
+                                   {% if exercice.complete %}checked{% endif %}
+                                   onclick="updateExercice(this)">
+                            <span class="exercice-themes">{{ exercice.themes }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
     </div>
 
     <script>
@@ -149,6 +185,20 @@
         `;
         document.body.appendChild(achievement);
         setTimeout(() => achievement.remove(), 5000);
+    }
+
+    function toggleExercices(element) {
+        const card = element.closest('.mobile-subject-card');
+        const exercicesList = card.querySelector('.mobile-exercices-list');
+        const toggleIcon = card.querySelector('.toggle-icon');
+        
+        if (exercicesList.style.maxHeight) {
+            exercicesList.style.maxHeight = null;
+            toggleIcon.style.transform = 'rotate(0deg)';
+        } else {
+            exercicesList.style.maxHeight = exercicesList.scrollHeight + "px";
+            toggleIcon.style.transform = 'rotate(180deg)';
+        }
     }
     </script>
 
@@ -276,6 +326,113 @@
         0% { transform: translateX(-50%) translateY(-100%); }
         70% { transform: translateX(-50%) translateY(20px); }
         100% { transform: translateX(-50%) translateY(0); }
+    }
+
+    /* Styles pour la version responsive */
+    @media screen and (max-width: 768px) {
+        .nav-bar {
+            flex-direction: column;
+            padding: 10px;
+            gap: 10px;
+        }
+
+        .nav-bar h1 {
+            font-size: 24px;
+            margin: 0;
+        }
+
+        .nav-links {
+            width: 100%;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .nav-link {
+            font-size: 14px;
+            padding: 6px 12px;
+        }
+
+        .desktop-only {
+            display: none;
+        }
+
+        .mobile-only {
+            display: block;
+        }
+
+        .mobile-subject-card {
+            background: white;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .mobile-subject-header {
+            padding: 15px;
+            background: linear-gradient(45deg, var(--primary-color), var(--hover-color));
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .mobile-subject-header h3 {
+            margin: 0;
+            font-size: 16px;
+            flex: 1;
+        }
+
+        .mobile-btn {
+            padding: 5px 10px;
+            font-size: 14px;
+            margin-left: 10px;
+            white-space: nowrap;
+            background: white;
+            color: var(--primary-color);
+        }
+
+        .toggle-icon {
+            margin-left: 10px;
+            transition: transform 0.3s ease;
+        }
+
+        .mobile-exercices-list {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .mobile-exercice-item {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .mobile-exercice-item:last-child {
+            border-bottom: none;
+        }
+
+        .exercice-number {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--primary-color);
+        }
+
+        .exercice-themes {
+            font-size: 14px;
+        }
+    }
+
+    @media screen and (min-width: 769px) {
+        .desktop-only {
+            display: block;
+        }
+
+        .mobile-only {
+            display: none;
+        }
     }
     </style>
 </body>

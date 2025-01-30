@@ -10,8 +10,14 @@
     <div class="nav-bar">
         <h1>Exercices</h1>
         <div class="nav-links">
-            <a href="{{ url_for('accueil') }}" class="nav-link">Accueil</a>
-            <a href="{{ url_for('logout') }}" class="nav-link">Déconnexion</a>
+            <a href="{{ url_for('accueil') }}" class="nav-link">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">Accueil</span>
+            </a>
+            <a href="{{ url_for('logout') }}" class="nav-link">
+                <span class="nav-icon">🚪</span>
+                <span class="nav-text">Déconnexion</span>
+            </a>
         </div>
     </div>
 
@@ -339,6 +345,7 @@
         .nav-bar h1 {
             font-size: 24px;
             margin: 0;
+            text-align: center;
         }
 
         .nav-links {
@@ -349,7 +356,50 @@
 
         .nav-link {
             font-size: 14px;
-            padding: 6px 12px;
+            padding: 10px 16px;
+            flex: 1;
+            justify-content: center;
+            max-width: 150px;
+        }
+
+        /* Animation tactile pour mobile */
+        .nav-link:active::before {
+            transform: translateX(100%) rotate(45deg);
+        }
+
+        .nav-link:active .nav-icon {
+            transform: scale(1.2);
+        }
+
+        .nav-link:active .nav-text::after {
+            transform: scaleX(1);
+        }
+
+        /* Ajustements pour le bouton "Voir le sujet" en mobile */
+        .mobile-btn {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .mobile-btn:active {
+            transform: translateY(1px);
+        }
+
+        .mobile-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, rgba(255,255,255,0.1), rgba(255,255,255,0.2));
+            transform: translateX(-100%) rotate(45deg);
+            transition: transform 0.6s ease;
+        }
+
+        .mobile-btn:active::before {
+            transform: translateX(100%) rotate(45deg);
         }
 
         .desktop-only {
@@ -433,6 +483,79 @@
         .mobile-only {
             display: none;
         }
+    }
+
+    /* Styles pour la navigation interactive */
+    .nav-link {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        background: linear-gradient(45deg, var(--primary-color), var(--hover-color));
+        color: white;
+        text-decoration: none;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .nav-link::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(45deg, rgba(255,255,255,0.1), rgba(255,255,255,0.2));
+        transform: translateX(-100%) rotate(45deg);
+        transition: transform 0.6s ease;
+    }
+
+    .nav-link:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .nav-link:hover::before {
+        transform: translateX(100%) rotate(45deg);
+    }
+
+    .nav-link:active {
+        transform: translateY(1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .nav-icon {
+        font-size: 1.2em;
+        transition: transform 0.3s ease;
+    }
+
+    .nav-link:hover .nav-icon {
+        transform: scale(1.2);
+    }
+
+    .nav-text {
+        position: relative;
+    }
+
+    .nav-text::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: white;
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+        transform-origin: right;
+    }
+
+    .nav-link:hover .nav-text::after {
+        transform: scaleX(1);
+        transform-origin: left;
     }
     </style>
 </body>

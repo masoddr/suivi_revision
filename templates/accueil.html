@@ -21,9 +21,36 @@
             </a>
         </div>
     </div>
-    
-    <div class="chart-container">
+
+    <div class="visualization-selector">
+        <button class="viz-button active" data-type="radar">
+            <span class="viz-icon">⭐</span>
+            <span class="viz-text">Diagramme en étoile</span>
+        </button>
+        <button class="viz-button" data-type="gauge">
+            <span class="viz-icon">📊</span>
+            <span class="viz-text">Jauges de progression</span>
+        </button>
+    </div>
+
+    <div class="chart-container" id="radarContainer">
         <canvas id="progressChart"></canvas>
+    </div>
+
+    <div class="gauges-container" id="gaugesContainer" style="display: none;">
+        <div class="gauge-grid">
+            {% for theme in ['Suites', 'Probabilités', 'Convexité', 'Intégrales', 'Géométrie dans l\'espace', 'Etudes de fonctions', 'Logarithme néperien', 'Exponentielle'] %}
+            <div class="gauge-item">
+                <div class="gauge-label">{{ theme }}</div>
+                <div class="gauge-bar-container">
+                    <div class="gauge-bar" data-theme="{{ theme }}">
+                        <div class="gauge-fill"></div>
+                        <div class="gauge-value">0/10</div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
     </div>
 
     <!-- Boîte de dialogue de confirmation -->
@@ -42,94 +69,192 @@
     <script>
         const ctx = document.getElementById('progressChart');
         let progressChart;
+        let currentType = 'radar';
         
-        function updateChart(newData) {
-            if (progressChart) {
-                progressChart.data.datasets[0].data = newData;
-                progressChart.update('active');
-            }
-        }
-
         // Fonction pour ajuster la taille de police en fonction de l'écran
         function getFontSize() {
             return window.innerWidth < 768 ? 10 : 16;
         }
 
+        // Fonction pour mettre à jour le graphique avec de nouvelles données
+        function updateChart(newData) {
+            if (currentType === 'radar' && progressChart) {
+                progressChart.data.datasets[0].data = newData;
+                progressChart.update('active');
+            } else if (currentType === 'gauge') {
+                updateGauges(newData);
+            }
+        }
+
+        // Fonction pour mettre à jour les jauges
+        function updateGauges(data) {
+            const themes = ['Suites', 'Probabilités', 'Convexité', 'Intégrales', 
+                           'Géométrie dans l\'espace', 'Etudes de fonctions', 
+                           'Logarithme néperien', 'Exponentielle'];
+            
+            themes.forEach((theme, index) => {
+                const value = data[index];
+                const gaugeBar = document.querySelector(`.gauge-bar[data-theme="${theme}"]`);
+                const gaugeFill = gaugeBar.querySelector('.gauge-fill');
+                const gaugeValue = gaugeBar.querySelector('.gauge-value');
+                
+                const percentage = (value / 10) * 100;
+                gaugeFill.style.width = `${percentage}%`;
+                gaugeValue.textContent = `${value}/10`;
+                
+                // Mettre à jour la couleur en fonction de la progression
+                if (percentage < 30) {
+                    gaugeFill.style.backgroundColor = '#ff6b6b';
+                } else if (percentage < 70) {
+                    gaugeFill.style.backgroundColor = '#ffd43b';
+                } else {
+                    gaugeFill.style.backgroundColor = '#51cf66';
+                }
+            });
+        }
+
         // Initialisation du graphique
-        progressChart = new Chart(ctx, {
-            type: 'radar',
-            data: {
-                labels: ['Suites', 'Probabilités', 'Convexité', 'Intégrales', 
-                        'Géométrie dans l\'espace', 'Etudes de fonctions', 
-                        'Logarithme néperien', 'Exponentielle'],
-                datasets: [{
-                    label: 'Exercices complétés',
-                    data: {{ progress_data|tojson }},
-                    fill: true,
-                    backgroundColor: 'rgba(108, 92, 231, 0.2)',
-                    borderColor: 'rgb(108, 92, 231)',
-                    pointBackgroundColor: 'rgb(108, 92, 231)',
-                    pointBorderColor: '#fff',
-                    pointHoverBackgroundColor: '#fff',
-                    pointHoverBorderColor: 'rgb(108, 92, 231)',
-                    borderWidth: 2,
-                    pointRadius: window.innerWidth < 768 ? 2 : 4,
-                    pointHoverRadius: window.innerWidth < 768 ? 4 : 6
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    r: {
-                        beginAtZero: true,
-                        max: 10,
-                        ticks: { 
-                            stepSize: 2,
-                            font: {
-                                size: getFontSize()
-                            }
-                        },
-                        grid: { color: 'rgba(0, 0, 0, 0.1)' },
-                        angleLines: { color: 'rgba(0, 0, 0, 0.1)' },
-                        pointLabels: {
-                            font: { 
-                                size: getFontSize(),
-                                family: 'Poppins'
-                            },
-                            callback: function(value) {
-                                // Raccourcir les labels sur mobile
-                                if (window.innerWidth < 768) {
-                                    const shortcuts = {
-                                        'Géométrie dans l\'espace': 'Géométrie',
-                                        'Etudes de fonctions': 'Fonctions',
-                                        'Logarithme néperien': 'Log',
-                                        'Probabilités': 'Proba'
-                                    };
-                                    return shortcuts[value] || value;
+        function initChart(type = 'radar') {
+            const config = {
+                type: type,
+                data: {
+                    labels: ['Suites', 'Probabilités', 'Convexité', 'Intégrales', 
+                            'Géométrie dans l\'espace', 'Etudes de fonctions', 
+                            'Logarithme néperien', 'Exponentielle'],
+                    datasets: [{
+                        label: 'Exercices complétés',
+                        data: {{ progress_data|tojson }},
+                        backgroundColor: type === 'radar' ? 'rgba(108, 92, 231, 0.2)' : 'rgba(108, 92, 231, 0.8)',
+                        borderColor: 'rgb(108, 92, 231)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: type === 'radar' ? {
+                        r: {
+                            beginAtZero: true,
+                            max: 10,
+                            ticks: { 
+                                stepSize: 2,
+                                font: {
+                                    size: getFontSize()
                                 }
-                                return value;
+                            },
+                            grid: { color: 'rgba(0, 0, 0, 0.1)' },
+                            angleLines: { color: 'rgba(0, 0, 0, 0.1)' },
+                            pointLabels: {
+                                font: { 
+                                    size: getFontSize(),
+                                    family: 'Poppins'
+                                },
+                                callback: function(value) {
+                                    if (window.innerWidth < 768) {
+                                        const shortcuts = {
+                                            'Géométrie dans l\'espace': 'Géométrie',
+                                            'Etudes de fonctions': 'Fonctions',
+                                            'Logarithme néperien': 'Log',
+                                            'Probabilités': 'Proba'
+                                        };
+                                        return shortcuts[value] || value;
+                                    }
+                                    return value;
+                                }
                             }
                         }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        labels: {
-                            font: { 
-                                size: getFontSize(),
-                                family: 'Poppins'
+                    } : {
+                        y: {
+                            beginAtZero: true,
+                            max: 10,
+                            ticks: {
+                                stepSize: 2,
+                                font: {
+                                    size: getFontSize(),
+                                    family: 'Poppins'
+                                }
                             }
+                        },
+                        x: {
+                            ticks: {
+                                font: {
+                                    size: getFontSize(),
+                                    family: 'Poppins'
+                                },
+                                callback: function(value) {
+                                    if (window.innerWidth < 768) {
+                                        const shortcuts = {
+                                            'Géométrie dans l\'espace': 'Géométrie',
+                                            'Etudes de fonctions': 'Fonctions',
+                                            'Logarithme néperien': 'Log',
+                                            'Probabilités': 'Proba'
+                                        };
+                                        return shortcuts[this.getLabelForValue(value)] || this.getLabelForValue(value);
+                                    }
+                                    return this.getLabelForValue(value);
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
                         }
                     }
                 }
+            };
+
+            if (type === 'radar') {
+                config.data.datasets[0].pointBackgroundColor = 'rgb(108, 92, 231)';
+                config.data.datasets[0].pointBorderColor = '#fff';
+                config.data.datasets[0].pointHoverBackgroundColor = '#fff';
+                config.data.datasets[0].pointHoverBorderColor = 'rgb(108, 92, 231)';
+                config.data.datasets[0].pointRadius = window.innerWidth < 768 ? 2 : 4;
+                config.data.datasets[0].pointHoverRadius = window.innerWidth < 768 ? 4 : 6;
             }
-        });
+
+            return new Chart(ctx, config);
+        }
+
+        // Initialiser le graphique avec le type par défaut
+        progressChart = initChart('radar');
 
         // Rendre le graphique accessible globalement pour les mises à jour depuis la page exercices
         window.progressChart = progressChart;
 
-        // Mettre à jour les données périodiquement (toutes les 5 secondes)
+        // Gestionnaire des boutons de visualisation
+        const vizButtons = document.querySelectorAll('.viz-button');
+        const radarContainer = document.getElementById('radarContainer');
+        const gaugesContainer = document.getElementById('gaugesContainer');
+
+        vizButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const type = button.dataset.type;
+                if (type !== currentType) {
+                    vizButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    currentType = type;
+                    
+                    if (type === 'radar') {
+                        radarContainer.style.display = 'block';
+                        radarContainer.classList.add('active');
+                        gaugesContainer.style.display = 'none';
+                        gaugesContainer.classList.remove('active');
+                        if (!progressChart) {
+                            progressChart = initChart('radar');
+                        }
+                    } else {
+                        radarContainer.style.display = 'none';
+                        radarContainer.classList.remove('active');
+                        gaugesContainer.style.display = 'block';
+                        gaugesContainer.classList.add('active');
+                        updateGauges(progressChart.data.datasets[0].data);
+                    }
+                }
+            });
+        });
+
+        // Mettre à jour les données périodiquement
         setInterval(() => {
             fetch('/get_progress')
                 .then(response => response.json())
@@ -143,10 +268,11 @@
 
         // Ajuster la taille du graphique lors du redimensionnement
         window.addEventListener('resize', () => {
-            progressChart.options.scales.r.pointLabels.font.size = getFontSize();
-            progressChart.options.scales.r.ticks.font.size = getFontSize();
-            progressChart.options.plugins.legend.labels.font.size = getFontSize();
-            progressChart.update();
+            const currentData = progressChart.data.datasets[0].data;
+            progressChart.destroy();
+            progressChart = initChart(currentType);
+            updateChart(currentData);
+            window.progressChart = progressChart;
         });
 
         // Fonction de réinitialisation
@@ -425,6 +551,187 @@
 
         .confirm-content h2 {
             font-size: 20px;
+        }
+    }
+
+    .visualization-selector {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin: 20px auto;
+        padding: 0 20px;
+    }
+
+    .viz-button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        background: white;
+        border: 2px solid var(--primary-color);
+        border-radius: 12px;
+        color: var(--primary-color);
+        font-family: 'Poppins', sans-serif;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .viz-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .viz-button.active {
+        background: linear-gradient(45deg, var(--primary-color), var(--hover-color));
+        color: white;
+        border-color: transparent;
+    }
+
+    .viz-icon {
+        font-size: 1.2em;
+    }
+
+    @media screen and (max-width: 768px) {
+        .visualization-selector {
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .viz-button {
+            width: 100%;
+            max-width: 250px;
+            justify-content: center;
+            font-size: 14px;
+            padding: 8px 16px;
+        }
+    }
+
+    .gauges-container {
+        width: 90%;
+        max-width: 800px;
+        margin: 20px auto;
+        padding: 20px;
+        height: auto;
+        overflow-y: auto;
+    }
+
+    .gauge-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        width: 100%;
+    }
+
+    .gauge-item {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        width: 100%;
+    }
+
+    .gauge-label {
+        flex: 0 0 200px;
+        font-family: 'Poppins', sans-serif;
+        font-weight: 500;
+        color: var(--primary-color);
+        text-align: right;
+    }
+
+    .gauge-bar-container {
+        flex: 1;
+        padding: 5px;
+        min-width: 0; /* Empêche le débordement */
+    }
+
+    .gauge-bar {
+        position: relative;
+        height: 30px;
+        background: #f1f3f5;
+        border-radius: 15px;
+        overflow: hidden;
+        width: 100%;
+    }
+
+    .gauge-fill {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        background: var(--primary-color);
+        border-radius: 15px;
+        transition: width 0.5s ease, background-color 0.5s ease;
+    }
+
+    .gauge-value {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: white;
+        font-family: 'Poppins', sans-serif;
+        font-weight: 600;
+        font-size: 14px;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        z-index: 1;
+    }
+
+    @media screen and (max-width: 768px) {
+        .gauges-container {
+            width: 95%;
+            padding: 10px;
+            margin: 10px auto;
+            height: auto;
+        }
+
+        .gauge-grid {
+            gap: 15px;
+        }
+
+        .gauge-item {
+            flex-direction: column;
+            gap: 5px;
+            align-items: stretch;
+        }
+
+        .gauge-label {
+            flex: none;
+            width: 100%;
+            text-align: left;
+            font-size: 14px;
+            margin-bottom: 2px;
+        }
+
+        .gauge-bar-container {
+            width: 100%;
+            padding: 0;
+        }
+
+        .gauge-bar {
+            height: 25px;
+            width: 100%;
+        }
+
+        .gauge-value {
+            font-size: 12px;
+            right: 8px;
+        }
+
+        #gaugesContainer {
+            display: none;
+        }
+
+        #gaugesContainer.active {
+            display: block;
+        }
+
+        #radarContainer {
+            display: none;
+        }
+
+        #radarContainer.active {
+            display: block;
         }
     }
     </style>

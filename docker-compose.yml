@@ -1,0 +1,18 @@
+version: '3'
+
+services:
+  suivi-revision:
+    build: .
+    container_name: suivi-revision
+    restart: always
+    environment:
+      - FLASK_APP=run.py
+      - FLASK_ENV=production
+    volumes:
+      - ./instance:/app/instance
+    networks:
+      - web
+
+networks:
+  web:
+    external: true 

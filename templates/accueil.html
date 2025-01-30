@@ -33,35 +33,29 @@
 </div>
 
 <div class="visualization-container">
-    <div class="card">
-        <div class="card-header">
-            <h2>Progression par thème</h2>
-            <div class="viz-controls">
-                <button class="btn btn-sm viz-button active" data-type="radar">
-                    <i class="bi bi-star"></i>
-                    <span>Diagramme en étoile</span>
-                </button>
-                <button class="btn btn-sm viz-button" data-type="gauge">
-                    <i class="bi bi-bar-chart"></i>
-                    <span>Jauges de progression</span>
-                </button>
+    <div class="charts-grid">
+        <div class="card">
+            <div class="card-header">
+                <h2>Progression par thème (Radar)</h2>
+            </div>
+            <div id="radarContainer" class="chart-wrapper">
+                <canvas id="progressChart"></canvas>
             </div>
         </div>
 
-        <div id="radarContainer" class="chart-wrapper">
-            <canvas id="progressChart"></canvas>
-        </div>
-
-        <div id="gaugesContainer" class="gauges-wrapper" style="display: none;">
-            <div class="gauge-grid">
+        <div class="card">
+            <div class="card-header">
+                <h2>Progression par thème (Jauges)</h2>
+            </div>
+            <div class="gauges-container">
                 {% for theme in ['Suites', 'Probabilités', 'Convexité', 'Intégrales', 'Géométrie dans l\'espace', 'Etudes de fonctions', 'Logarithme néperien', 'Exponentielle'] %}
                 <div class="gauge-item">
                     <div class="gauge-label">{{ theme }}</div>
-                    <div class="gauge-bar-container">
-                        <div class="gauge-bar" data-theme="{{ theme }}">
-                            <div class="gauge-fill"></div>
-                            <div class="gauge-value">0/10</div>
+                    <div class="gauge-progress">
+                        <div class="gauge-bar">
+                            <div class="gauge-fill" data-theme="{{ theme }}"></div>
                         </div>
+                        <span class="gauge-value">0/10</span>
                     </div>
                 </div>
                 {% endfor %}
@@ -117,27 +111,37 @@
     color: var(--gray-800);
 }
 
-.viz-controls {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.btn-sm {
-    padding: 0.375rem 0.75rem;
-    font-size: 0.875rem;
-}
-
 .chart-wrapper {
     height: 400px;
 }
 
-.gauges-wrapper {
-    padding: 1rem 0;
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
 }
 
-.gauge-grid {
-    display: grid;
-    gap: 1.5rem;
+@media screen and (max-width: 1024px) {
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+}
+
+.gauges-container {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    height: 100%;
+    overflow-y: auto;
 }
 
 .gauge-item {
@@ -150,50 +154,39 @@
     flex: 0 0 200px;
     font-weight: 500;
     color: var(--gray-700);
-    text-align: right;
 }
 
-.gauge-bar-container {
+.gauge-progress {
     flex: 1;
-    height: 24px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.gauge-bar {
+    flex: 1;
+    height: 12px;
     background-color: var(--gray-100);
-    border-radius: var(--border-radius);
+    border-radius: 6px;
     overflow: hidden;
-    position: relative;
 }
 
 .gauge-fill {
     height: 100%;
+    width: 0;
     background-color: var(--primary);
-    border-radius: var(--border-radius);
-    transition: width 0.3s ease;
+    border-radius: 6px;
+    transition: all 0.3s ease;
 }
 
 .gauge-value {
-    position: absolute;
-    right: 0.75rem;
-    top: 50%;
-    transform: translateY(-50%);
+    min-width: 45px;
     font-size: 0.875rem;
     font-weight: 500;
-    color: white;
+    color: var(--gray-600);
 }
 
 @media screen and (max-width: 768px) {
-    .card-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
-    }
-
-    .viz-controls {
-        width: 100%;
-    }
-
-    .btn-sm {
-        flex: 1;
-    }
-
     .gauge-item {
         flex-direction: column;
         align-items: flex-start;
@@ -203,7 +196,10 @@
     .gauge-label {
         flex: none;
         width: 100%;
-        text-align: left;
+    }
+
+    .gauge-progress {
+        width: 100%;
     }
 }
 </style>
@@ -212,19 +208,19 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-const ctx = document.getElementById('progressChart');
-let progressChart;
-let currentType = 'radar';
+const ctxRadar = document.getElementById('progressChart');
+const ctxBar = document.getElementById('barChart');
+let progressChart, barChart;
 
 // Fonction pour ajuster la taille de police en fonction de l'écran
 function getFontSize() {
     return window.innerWidth < 768 ? 10 : 16;
 }
 
-// Fonction pour initialiser le graphique
-function initChart(type) {
+// Fonction pour initialiser le graphique radar
+function initRadarChart() {
     const config = {
-        type: type,
+        type: 'radar',
         data: {
             labels: ['Suites', 'Probabilités', 'Convexité', 'Intégrales', 'Géométrie dans l\'espace', 'Etudes de fonctions', 'Logarithme néperien', 'Exponentielle'],
             datasets: [{
@@ -233,10 +229,16 @@ function initChart(type) {
                 backgroundColor: 'rgba(108, 92, 231, 0.2)',
                 borderColor: 'rgb(108, 92, 231)',
                 borderWidth: 2,
-                fill: true
+                fill: true,
+                pointBackgroundColor: 'rgb(108, 92, 231)',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: 'rgb(108, 92, 231)',
+                pointRadius: window.innerWidth < 768 ? 2 : 4,
+                pointHoverRadius: window.innerWidth < 768 ? 4 : 6
             }]
         },
-        options: type === 'radar' ? {
+        options: {
             scales: {
                 r: {
                     angleLines: {
@@ -276,11 +278,35 @@ function initChart(type) {
                     display: false
                 }
             }
-        } : {
+        }
+    };
+
+    return new Chart(ctxRadar, config);
+}
+
+// Fonction pour initialiser le graphique en barres
+function initBarChart() {
+    const config = {
+        type: 'bar',
+        data: {
+            labels: ['Suites', 'Probabilités', 'Convexité', 'Intégrales', 'Géométrie dans l\'espace', 'Etudes de fonctions', 'Logarithme néperien', 'Exponentielle'],
+            datasets: [{
+                label: 'Progression',
+                data: {{ progress_data|tojson }},
+                backgroundColor: 'rgba(108, 92, 231, 0.2)',
+                borderColor: 'rgb(108, 92, 231)',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            indexAxis: 'y',
             scales: {
-                y: {
+                x: {
                     beginAtZero: true,
                     max: 10,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    },
                     ticks: {
                         stepSize: 2,
                         font: {
@@ -289,11 +315,26 @@ function initChart(type) {
                         }
                     }
                 },
-                x: {
+                y: {
+                    grid: {
+                        display: false
+                    },
                     ticks: {
                         font: {
                             size: getFontSize(),
                             family: 'Inter'
+                        },
+                        callback: function(value) {
+                            if (window.innerWidth < 768) {
+                                const shortcuts = {
+                                    'Géométrie dans l\'espace': 'Géométrie',
+                                    'Etudes de fonctions': 'Fonctions',
+                                    'Logarithme néperien': 'Log',
+                                    'Probabilités': 'Proba'
+                                };
+                                return shortcuts[value] || value;
+                            }
+                            return value;
                         }
                     }
                 }
@@ -302,92 +343,85 @@ function initChart(type) {
                 legend: {
                     display: false
                 }
-            }
+            },
+            maintainAspectRatio: false
         }
     };
 
-    if (type === 'radar') {
-        config.data.datasets[0].pointBackgroundColor = 'rgb(108, 92, 231)';
-        config.data.datasets[0].pointBorderColor = '#fff';
-        config.data.datasets[0].pointHoverBackgroundColor = '#fff';
-        config.data.datasets[0].pointHoverBorderColor = 'rgb(108, 92, 231)';
-        config.data.datasets[0].pointRadius = window.innerWidth < 768 ? 2 : 4;
-        config.data.datasets[0].pointHoverRadius = window.innerWidth < 768 ? 4 : 6;
+    return new Chart(ctxBar, config);
+}
+
+// Initialiser les graphiques
+progressChart = initRadarChart();
+barChart = initBarChart();
+
+// Fonction pour mettre à jour les statistiques
+function updateStats(data) {
+    const total = data.length * 10; // 10 exercices max par thème
+    const completed = data.reduce((sum, val) => sum + val, 0);
+    const percentage = Math.round((completed / total) * 100);
+    
+    // Mettre à jour le compteur d'exercices
+    const completedCounter = document.querySelector('.stat-card:nth-child(1) .value');
+    if (completedCounter) {
+        completedCounter.textContent = `${completed}/${total}`;
     }
-
-    return new Chart(ctx, config);
+    
+    // Mettre à jour la barre de progression
+    const progressBar = document.querySelector('.progress-bar');
+    if (progressBar) {
+        progressBar.style.width = `${percentage}%`;
+    }
+    
+    // Mettre à jour le pourcentage global
+    const globalProgress = document.querySelector('.stat-card:nth-child(2) .value');
+    if (globalProgress) {
+        globalProgress.textContent = `${percentage}%`;
+    }
 }
-
-// Initialiser le graphique avec le type par défaut
-progressChart = initChart('radar');
-
-// Fonction pour mettre à jour les jauges
-function updateGauges(data) {
-    const themes = ['Suites', 'Probabilités', 'Convexité', 'Intégrales', 'Géométrie dans l\'espace', 'Etudes de fonctions', 'Logarithme néperien', 'Exponentielle'];
-    themes.forEach((theme, index) => {
-        const gauge = document.querySelector(`.gauge-bar[data-theme="${theme}"]`);
-        if (gauge) {
-            const value = data[index];
-            const fill = gauge.querySelector('.gauge-fill');
-            const valueDisplay = gauge.querySelector('.gauge-value');
-            
-            fill.style.width = `${(value / 10) * 100}%`;
-            fill.style.backgroundColor = getProgressColor(value);
-            valueDisplay.textContent = `${value}/10`;
-        }
-    });
-}
-
-// Fonction pour obtenir la couleur en fonction de la progression
-function getProgressColor(value) {
-    if (value <= 3) return 'var(--danger)';
-    if (value <= 6) return 'var(--warning)';
-    return 'var(--success)';
-}
-
-// Gestionnaire des boutons de visualisation
-const vizButtons = document.querySelectorAll('.viz-button');
-const radarContainer = document.getElementById('radarContainer');
-const gaugesContainer = document.getElementById('gaugesContainer');
-
-vizButtons.forEach(button => {
-    button.addEventListener('click', () => {
-        const type = button.dataset.type;
-        
-        // Mettre à jour les classes actives des boutons
-        vizButtons.forEach(btn => btn.classList.remove('active'));
-        button.classList.add('active');
-        
-        // Afficher/masquer les conteneurs appropriés
-        if (type === 'radar') {
-            radarContainer.style.display = 'block';
-            gaugesContainer.style.display = 'none';
-            currentType = 'radar';
-        } else {
-            radarContainer.style.display = 'none';
-            gaugesContainer.style.display = 'block';
-            currentType = 'gauge';
-            updateGauges({{ progress_data|tojson }});
-        }
-    });
-});
 
 // Fonction pour mettre à jour les visualisations
 function updateVisualizations(newData) {
-    if (currentType === 'radar') {
+    if (progressChart) {
         progressChart.data.datasets[0].data = newData;
         progressChart.update();
-    } else {
-        updateGauges(newData);
     }
+    
+    // Mettre à jour les jauges
+    const themes = ['Suites', 'Probabilités', 'Convexité', 'Intégrales', 'Géométrie dans l\'espace', 'Etudes de fonctions', 'Logarithme néperien', 'Exponentielle'];
+    themes.forEach((theme, index) => {
+        const value = newData[index];
+        const fill = document.querySelector(`.gauge-fill[data-theme="${theme}"]`);
+        const valueDisplay = fill.closest('.gauge-progress').querySelector('.gauge-value');
+        
+        // Mettre à jour la largeur de la jauge
+        fill.style.width = `${(value / 10) * 100}%`;
+        
+        // Mettre à jour la couleur en fonction de la progression
+        if (value <= 3) {
+            fill.style.backgroundColor = 'var(--danger)';
+        } else if (value <= 6) {
+            fill.style.backgroundColor = 'var(--warning)';
+        } else {
+            fill.style.backgroundColor = 'var(--success)';
+        }
+        
+        // Mettre à jour l'affichage de la valeur
+        valueDisplay.textContent = `${value}/10`;
+    });
+    
+    updateStats(newData);
 }
 
 // Écouter les mises à jour de progression
 document.addEventListener('progressUpdated', function(event) {
-    updateVisualizations(event.detail.progress);
+    if (event.detail && event.detail.progress) {
+        updateVisualizations(event.detail.progress);
+    }
 });
 
-// Initialiser les jauges avec les données initiales
-updateGauges({{ progress_data|tojson }});
+// Initialiser les visualisations avec les données initiales
+const initialData = {{ progress_data|tojson }};
+updateVisualizations(initialData);
 </script>
 {% endblock %} 

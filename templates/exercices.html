@@ -483,22 +483,24 @@ function showEncouragement() {
     }
 
 function checkAnnaleComplete(exerciceId) {
-    const row = document.querySelector(`input[data-id="${exerciceId}"]`).closest('tr');
-    const sujet = row.querySelector('td').textContent;
+    const checkbox = document.querySelector(`input[data-id="${exerciceId}"]`);
+    const subjectCard = checkbox.closest('.subject-card') || checkbox.closest('.subject-card-mobile');
+    const subjectTitle = subjectCard.querySelector('h3').textContent;
     
     fetch('/check_annale_complete', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ sujet: sujet })
+        body: JSON.stringify({ sujet: subjectTitle })
     })
     .then(response => response.json())
     .then(data => {
         if (data.complete) {
             showAchievement(data.message);
         }
-    });
+    })
+    .catch(error => console.error('Erreur lors de la vérification:', error));
 }
 
 function showNotification(message, isError = false) {
@@ -557,5 +559,15 @@ function resetProgress() {
         showNotification("Erreur lors de la réinitialisation.", true);
     });
 }
+
+// Ajouter un écouteur d'événements pour les mises à jour de progression
+document.addEventListener('progressUpdated', function(event) {
+    // Propager l'événement au parent (page d'accueil) si elle existe
+    if (window.parent && window.parent !== window) {
+        window.parent.document.dispatchEvent(new CustomEvent('progressUpdated', {
+            detail: event.detail
+        }));
+    }
+});
 </script>
 {% endblock %} 

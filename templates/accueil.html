@@ -1,739 +1,393 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Suivi des révisions</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <div class="nav-bar">
-        <h1>Bienvenue {{ current_user.username }}</h1>
-        <div class="nav-links">
-            <a href="{{ url_for('exercices') }}" class="nav-link">
-                <span class="nav-icon">📝</span>
-                <span class="nav-text">Exercices</span>
-            </a>
-            <a href="{{ url_for('logout') }}" class="nav-link">
-                <span class="nav-icon">🚪</span>
-                <span class="nav-text">Déconnexion</span>
-            </a>
+{% extends "base.html" %}
+
+{% block title %}Tableau de bord - Suivi des révisions{% endblock %}
+
+{% block content %}
+<div class="card-grid">
+    <div class="card stat-card">
+        <div class="stat-header">
+            <i class="bi bi-check2-circle"></i>
+            <span class="label">Exercices complétés</span>
+        </div>
+        <div class="value">{{ completed_count }}/{{ total_count }}</div>
+        <div class="progress">
+            <div class="progress-bar" style="width: {{ (completed_count/total_count * 100)|round }}%"></div>
         </div>
     </div>
 
-    <div class="visualization-selector">
-        <button class="viz-button active" data-type="radar">
-            <span class="viz-icon">⭐</span>
-            <span class="viz-text">Diagramme en étoile</span>
-        </button>
-        <button class="viz-button" data-type="gauge">
-            <span class="viz-icon">📊</span>
-            <span class="viz-text">Jauges de progression</span>
-        </button>
+    <div class="card stat-card">
+        <div class="stat-header">
+            <i class="bi bi-trophy"></i>
+            <span class="label">Progression globale</span>
+        </div>
+        <div class="value">{{ (completed_count/total_count * 100)|round }}%</div>
     </div>
 
-    <div class="chart-container" id="radarContainer">
-        <canvas id="progressChart"></canvas>
+    <div class="card stat-card">
+        <div class="stat-header">
+            <i class="bi bi-lightning"></i>
+            <span class="label">Meilleur thème</span>
+        </div>
+        <div class="value">{{ best_theme }}</div>
     </div>
+</div>
 
-    <div class="gauges-container" id="gaugesContainer" style="display: none;">
-        <div class="gauge-grid">
-            {% for theme in ['Suites', 'Probabilités', 'Convexité', 'Intégrales', 'Géométrie dans l\'espace', 'Etudes de fonctions', 'Logarithme néperien', 'Exponentielle'] %}
-            <div class="gauge-item">
-                <div class="gauge-label">{{ theme }}</div>
-                <div class="gauge-bar-container">
-                    <div class="gauge-bar" data-theme="{{ theme }}">
-                        <div class="gauge-fill"></div>
-                        <div class="gauge-value">0/10</div>
+<div class="visualization-container">
+    <div class="card">
+        <div class="card-header">
+            <h2>Progression par thème</h2>
+            <div class="viz-controls">
+                <button class="btn btn-sm viz-button active" data-type="radar">
+                    <i class="bi bi-star"></i>
+                    <span>Diagramme en étoile</span>
+                </button>
+                <button class="btn btn-sm viz-button" data-type="gauge">
+                    <i class="bi bi-bar-chart"></i>
+                    <span>Jauges de progression</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="radarContainer" class="chart-wrapper">
+            <canvas id="progressChart"></canvas>
+        </div>
+
+        <div id="gaugesContainer" class="gauges-wrapper" style="display: none;">
+            <div class="gauge-grid">
+                {% for theme in ['Suites', 'Probabilités', 'Convexité', 'Intégrales', 'Géométrie dans l\'espace', 'Etudes de fonctions', 'Logarithme néperien', 'Exponentielle'] %}
+                <div class="gauge-item">
+                    <div class="gauge-label">{{ theme }}</div>
+                    <div class="gauge-bar-container">
+                        <div class="gauge-bar" data-theme="{{ theme }}">
+                            <div class="gauge-fill"></div>
+                            <div class="gauge-value">0/10</div>
+                        </div>
                     </div>
                 </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- Boîte de dialogue de confirmation -->
-    <div id="confirmDialog" class="confirm-dialog">
-        <div class="confirm-content">
-            <h2>⚠️ Confirmation</h2>
-            <p>Êtes-vous sûr de vouloir réinitialiser tous vos progrès ?</p>
-            <p class="warning-text">Cette action est irréversible !</p>
-            <div class="confirm-buttons">
-                <button id="cancelReset" class="cancel-button">Annuler</button>
-                <button id="confirmReset" class="confirm-button">Réinitialiser</button>
+                {% endfor %}
             </div>
         </div>
     </div>
-    
-    <script>
-        const ctx = document.getElementById('progressChart');
-        let progressChart;
-        let currentType = 'radar';
-        
-        // Fonction pour ajuster la taille de police en fonction de l'écran
-        function getFontSize() {
-            return window.innerWidth < 768 ? 10 : 16;
-        }
+</div>
+{% endblock %}
 
-        // Fonction pour mettre à jour le graphique avec de nouvelles données
-        function updateChart(newData) {
-            if (currentType === 'radar' && progressChart) {
-                progressChart.data.datasets[0].data = newData;
-                progressChart.update('active');
-            } else if (currentType === 'gauge') {
-                updateGauges(newData);
-            }
-        }
+{% block extra_css %}
+<style>
+.stat-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
 
-        // Fonction pour mettre à jour les jauges
-        function updateGauges(data) {
-            const themes = ['Suites', 'Probabilités', 'Convexité', 'Intégrales', 
-                           'Géométrie dans l\'espace', 'Etudes de fonctions', 
-                           'Logarithme néperien', 'Exponentielle'];
-            
-            themes.forEach((theme, index) => {
-                const value = data[index];
-                const gaugeBar = document.querySelector(`.gauge-bar[data-theme="${theme}"]`);
-                const gaugeFill = gaugeBar.querySelector('.gauge-fill');
-                const gaugeValue = gaugeBar.querySelector('.gauge-value');
-                
-                const percentage = (value / 10) * 100;
-                gaugeFill.style.width = `${percentage}%`;
-                gaugeValue.textContent = `${value}/10`;
-                
-                // Mettre à jour la couleur en fonction de la progression
-                if (percentage < 30) {
-                    gaugeFill.style.backgroundColor = '#ff6b6b';
-                } else if (percentage < 70) {
-                    gaugeFill.style.backgroundColor = '#ffd43b';
-                } else {
-                    gaugeFill.style.backgroundColor = '#51cf66';
-                }
-            });
-        }
+.stat-header i {
+    font-size: 1.5rem;
+    color: var(--primary);
+}
 
-        // Initialisation du graphique
-        function initChart(type = 'radar') {
-            const config = {
-                type: type,
-                data: {
-                    labels: ['Suites', 'Probabilités', 'Convexité', 'Intégrales', 
-                            'Géométrie dans l\'espace', 'Etudes de fonctions', 
-                            'Logarithme néperien', 'Exponentielle'],
-                    datasets: [{
-                        label: 'Exercices complétés',
-                        data: {{ progress_data|tojson }},
-                        backgroundColor: type === 'radar' ? 'rgba(108, 92, 231, 0.2)' : 'rgba(108, 92, 231, 0.8)',
-                        borderColor: 'rgb(108, 92, 231)',
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: type === 'radar' ? {
-                        r: {
-                            beginAtZero: true,
-                            max: 10,
-                            ticks: { 
-                                stepSize: 2,
-                                font: {
-                                    size: getFontSize()
-                                }
-                            },
-                            grid: { color: 'rgba(0, 0, 0, 0.1)' },
-                            angleLines: { color: 'rgba(0, 0, 0, 0.1)' },
-                            pointLabels: {
-                                font: { 
-                                    size: getFontSize(),
-                                    family: 'Poppins'
-                                },
-                                callback: function(value) {
-                                    if (window.innerWidth < 768) {
-                                        const shortcuts = {
-                                            'Géométrie dans l\'espace': 'Géométrie',
-                                            'Etudes de fonctions': 'Fonctions',
-                                            'Logarithme néperien': 'Log',
-                                            'Probabilités': 'Proba'
-                                        };
-                                        return shortcuts[value] || value;
-                                    }
-                                    return value;
-                                }
-                            }
-                        }
-                    } : {
-                        y: {
-                            beginAtZero: true,
-                            max: 10,
-                            ticks: {
-                                stepSize: 2,
-                                font: {
-                                    size: getFontSize(),
-                                    family: 'Poppins'
-                                }
-                            }
-                        },
-                        x: {
-                            ticks: {
-                                font: {
-                                    size: getFontSize(),
-                                    family: 'Poppins'
-                                },
-                                callback: function(value) {
-                                    if (window.innerWidth < 768) {
-                                        const shortcuts = {
-                                            'Géométrie dans l\'espace': 'Géométrie',
-                                            'Etudes de fonctions': 'Fonctions',
-                                            'Logarithme néperien': 'Log',
-                                            'Probabilités': 'Proba'
-                                        };
-                                        return shortcuts[this.getLabelForValue(value)] || this.getLabelForValue(value);
-                                    }
-                                    return this.getLabelForValue(value);
-                                }
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    }
-                }
-            };
+.progress {
+    height: 6px;
+    background-color: var(--gray-200);
+    border-radius: 9999px;
+    overflow: hidden;
+    margin-top: 0.75rem;
+}
 
-            if (type === 'radar') {
-                config.data.datasets[0].pointBackgroundColor = 'rgb(108, 92, 231)';
-                config.data.datasets[0].pointBorderColor = '#fff';
-                config.data.datasets[0].pointHoverBackgroundColor = '#fff';
-                config.data.datasets[0].pointHoverBorderColor = 'rgb(108, 92, 231)';
-                config.data.datasets[0].pointRadius = window.innerWidth < 768 ? 2 : 4;
-                config.data.datasets[0].pointHoverRadius = window.innerWidth < 768 ? 4 : 6;
-            }
+.progress-bar {
+    height: 100%;
+    background-color: var(--primary);
+    border-radius: 9999px;
+    transition: width 0.3s ease;
+}
 
-            return new Chart(ctx, config);
-        }
+.visualization-container {
+    margin-top: 2rem;
+}
 
-        // Initialiser le graphique avec le type par défaut
-        progressChart = initChart('radar');
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+}
 
-        // Rendre le graphique accessible globalement pour les mises à jour depuis la page exercices
-        window.progressChart = progressChart;
+.card-header h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gray-800);
+}
 
-        // Gestionnaire des boutons de visualisation
-        const vizButtons = document.querySelectorAll('.viz-button');
-        const radarContainer = document.getElementById('radarContainer');
-        const gaugesContainer = document.getElementById('gaugesContainer');
+.viz-controls {
+    display: flex;
+    gap: 0.5rem;
+}
 
-        vizButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const type = button.dataset.type;
-                if (type !== currentType) {
-                    vizButtons.forEach(btn => btn.classList.remove('active'));
-                    button.classList.add('active');
-                    currentType = type;
-                    
-                    if (type === 'radar') {
-                        radarContainer.style.display = 'block';
-                        radarContainer.classList.add('active');
-                        gaugesContainer.style.display = 'none';
-                        gaugesContainer.classList.remove('active');
-                        if (!progressChart) {
-                            progressChart = initChart('radar');
-                        }
-                    } else {
-                        radarContainer.style.display = 'none';
-                        radarContainer.classList.remove('active');
-                        gaugesContainer.style.display = 'block';
-                        gaugesContainer.classList.add('active');
-                        updateGauges(progressChart.data.datasets[0].data);
-                    }
-                }
-            });
-        });
+.btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+}
 
-        // Mettre à jour les données périodiquement
-        setInterval(() => {
-            fetch('/get_progress')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.progress) {
-                        updateChart(data.progress);
-                    }
-                })
-                .catch(error => console.error('Erreur lors de la mise à jour:', error));
-        }, 5000);
+.chart-wrapper {
+    height: 400px;
+}
 
-        // Ajuster la taille du graphique lors du redimensionnement
-        window.addEventListener('resize', () => {
-            const currentData = progressChart.data.datasets[0].data;
-            progressChart.destroy();
-            progressChart = initChart(currentType);
-            updateChart(currentData);
-            window.progressChart = progressChart;
-        });
+.gauges-wrapper {
+    padding: 1rem 0;
+}
 
-        // Fonction de réinitialisation
-        function resetProgress() {
-            fetch('/reset_progress', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Mettre à jour le graphique avec des valeurs à zéro
-                    const zeroData = new Array(progressChart.data.labels.length).fill(0);
-                    updateChart(zeroData);
-                    
-                    // Afficher une notification de succès
-                    showNotification("Réinitialisation effectuée avec succès !");
-                } else {
-                    showNotification("Erreur lors de la réinitialisation.", true);
-                }
-            })
-            .catch(error => {
-                console.error('Erreur:', error);
-                showNotification("Erreur lors de la réinitialisation.", true);
-            });
-        }
+.gauge-grid {
+    display: grid;
+    gap: 1.5rem;
+}
 
-        // Fonction pour afficher une notification
-        function showNotification(message, isError = false) {
-            const notification = document.createElement('div');
-            notification.className = `notification ${isError ? 'error' : 'success'}`;
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            setTimeout(() => notification.remove(), 3000);
-        }
+.gauge-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
 
-        // Gestionnaires d'événements pour la boîte de dialogue
-        const confirmDialog = document.getElementById('confirmDialog');
-        const cancelReset = document.getElementById('cancelReset');
-        const confirmReset = document.getElementById('confirmReset');
+.gauge-label {
+    flex: 0 0 200px;
+    font-weight: 500;
+    color: var(--gray-700);
+    text-align: right;
+}
 
-        cancelReset.addEventListener('click', () => {
-            confirmDialog.classList.remove('show');
-        });
+.gauge-bar-container {
+    flex: 1;
+    height: 24px;
+    background-color: var(--gray-100);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    position: relative;
+}
 
-        confirmReset.addEventListener('click', () => {
-            confirmDialog.classList.remove('show');
-            resetProgress();
-        });
+.gauge-fill {
+    height: 100%;
+    background-color: var(--primary);
+    border-radius: var(--border-radius);
+    transition: width 0.3s ease;
+}
 
-        // Fermer la boîte de dialogue en cliquant en dehors
-        confirmDialog.addEventListener('click', (e) => {
-            if (e.target === confirmDialog) {
-                confirmDialog.classList.remove('show');
-            }
-        });
-    </script>
+.gauge-value {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: white;
+}
 
-    <style>
-    .nav-link {
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        padding: 8px 16px;
-        background: linear-gradient(45deg, var(--primary-color), var(--hover-color));
-        color: white;
-        text-decoration: none;
-        border-radius: 12px;
-        transition: all 0.3s ease;
-        overflow: hidden;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        text-align: center;
-        min-width: 120px;
-    }
-
-    .nav-link::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(45deg, rgba(255,255,255,0.1), rgba(255,255,255,0.2));
-        transform: translateX(-100%) rotate(45deg);
-        transition: transform 0.6s ease;
-    }
-
-    .nav-link:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    }
-
-    .nav-link:hover::before {
-        transform: translateX(100%) rotate(45deg);
-    }
-
-    .nav-link:active {
-        transform: translateY(1px);
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .nav-text {
-        position: relative;
-        white-space: nowrap;
-        text-align: center;
-        flex: 0 0 auto;
-    }
-
-    .nav-icon {
-        font-size: 1.2em;
-        transition: transform 0.3s ease;
-        flex: 0 0 auto;
-    }
-
-    @media screen and (max-width: 768px) {
-        .nav-bar {
-            flex-direction: column;
-            padding: 10px;
-            gap: 10px;
-        }
-
-        .nav-bar h1 {
-            font-size: 24px;
-            margin: 0;
-            text-align: center;
-        }
-
-        .nav-links {
-            width: 100%;
-            justify-content: center;
-            gap: 10px;
-            display: flex;
-            flex-wrap: wrap;
-        }
-
-        .nav-link {
-            font-size: 14px;
-            padding: 8px 12px;
-            flex: 0 1 auto;
-            min-width: 100px;
-            max-width: 130px;
-        }
-
-        .nav-text {
-            font-size: 13px;
-        }
-
-        .chart-container {
-            width: 95%;
-            height: 95vw;
-            margin: 20px auto;
-            padding: 10px;
-        }
-
-        /* Animation tactile pour mobile */
-        .nav-link:active::before {
-            transform: translateX(100%) rotate(45deg);
-        }
-
-        .nav-link:active .nav-icon {
-            transform: scale(1.2);
-        }
-
-        .nav-link:active .nav-text::after {
-            transform: scaleX(1);
-        }
-    }
-
-    .confirm-dialog {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-    }
-
-    .confirm-dialog.show {
-        display: flex;
-    }
-
-    .confirm-content {
-        background: white;
-        padding: 30px;
-        border-radius: 15px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-        text-align: center;
-        max-width: 90%;
-        width: 400px;
-    }
-
-    .confirm-content h2 {
-        margin: 0 0 20px 0;
-        color: #ff6b6b;
-    }
-
-    .warning-text {
-        color: #ff6b6b;
-        font-weight: 600;
-        margin: 20px 0;
-    }
-
-    .confirm-buttons {
-        display: flex;
-        justify-content: center;
-        gap: 15px;
-        margin-top: 25px;
-    }
-
-    .cancel-button, .confirm-button {
-        padding: 10px 20px;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        font-family: 'Poppins', sans-serif;
-        font-size: 14px;
-        transition: all 0.3s ease;
-    }
-
-    .cancel-button {
-        background: #f1f3f5;
-        color: #495057;
-    }
-
-    .confirm-button {
-        background: #ff6b6b;
-        color: white;
-    }
-
-    .cancel-button:hover, .confirm-button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-
-    .notification {
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        padding: 15px 30px;
-        border-radius: 12px;
-        color: white;
-        font-family: 'Poppins', sans-serif;
-        font-weight: 500;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        animation: slideIn 0.3s ease-out;
-        z-index: 1000;
-    }
-
-    .notification.success {
-        background: linear-gradient(45deg, #37b24d, #40c057);
-    }
-
-    .notification.error {
-        background: linear-gradient(45deg, #f03e3e, #ff6b6b);
-    }
-
-    @keyframes slideIn {
-        from { transform: translateX(-50%) translateY(-100%); opacity: 0; }
-        to { transform: translateX(-50%) translateY(0); opacity: 1; }
-    }
-
-    @media screen and (max-width: 768px) {
-        .confirm-content {
-            width: 85%;
-            padding: 20px;
-        }
-
-        .confirm-content h2 {
-            font-size: 20px;
-        }
-    }
-
-    .visualization-selector {
-        display: flex;
-        justify-content: center;
-        gap: 15px;
-        margin: 20px auto;
-        padding: 0 20px;
-    }
-
-    .viz-button {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 20px;
-        background: white;
-        border: 2px solid var(--primary-color);
-        border-radius: 12px;
-        color: var(--primary-color);
-        font-family: 'Poppins', sans-serif;
-        font-size: 16px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-
-    .viz-button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-
-    .viz-button.active {
-        background: linear-gradient(45deg, var(--primary-color), var(--hover-color));
-        color: white;
-        border-color: transparent;
-    }
-
-    .viz-icon {
-        font-size: 1.2em;
-    }
-
-    @media screen and (max-width: 768px) {
-        .visualization-selector {
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .viz-button {
-            width: 100%;
-            max-width: 250px;
-            justify-content: center;
-            font-size: 14px;
-            padding: 8px 16px;
-        }
-    }
-
-    .gauges-container {
-        width: 90%;
-        max-width: 800px;
-        margin: 20px auto;
-        padding: 20px;
-        height: auto;
-        overflow-y: auto;
-    }
-
-    .gauge-grid {
-        display: flex;
+@media screen and (max-width: 768px) {
+    .card-header {
         flex-direction: column;
-        gap: 20px;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .viz-controls {
         width: 100%;
+    }
+
+    .btn-sm {
+        flex: 1;
     }
 
     .gauge-item {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-        width: 100%;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
     }
 
     .gauge-label {
-        flex: 0 0 200px;
-        font-family: 'Poppins', sans-serif;
-        font-weight: 500;
-        color: var(--primary-color);
-        text-align: right;
-    }
-
-    .gauge-bar-container {
-        flex: 1;
-        padding: 5px;
-        min-width: 0; /* Empêche le débordement */
-    }
-
-    .gauge-bar {
-        position: relative;
-        height: 30px;
-        background: #f1f3f5;
-        border-radius: 15px;
-        overflow: hidden;
+        flex: none;
         width: 100%;
+        text-align: left;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const ctx = document.getElementById('progressChart');
+let progressChart;
+let currentType = 'radar';
+
+// Fonction pour ajuster la taille de police en fonction de l'écran
+function getFontSize() {
+    return window.innerWidth < 768 ? 10 : 16;
+}
+
+// Fonction pour initialiser le graphique
+function initChart(type) {
+    const config = {
+        type: type,
+        data: {
+            labels: ['Suites', 'Probabilités', 'Convexité', 'Intégrales', 'Géométrie dans l\'espace', 'Etudes de fonctions', 'Logarithme néperien', 'Exponentielle'],
+            datasets: [{
+                label: 'Progression',
+                data: {{ progress_data|tojson }},
+                backgroundColor: 'rgba(108, 92, 231, 0.2)',
+                borderColor: 'rgb(108, 92, 231)',
+                borderWidth: 2,
+                fill: true
+            }]
+        },
+        options: type === 'radar' ? {
+            scales: {
+                r: {
+                    angleLines: {
+                        display: true
+                    },
+                    suggestedMin: 0,
+                    suggestedMax: 10,
+                    ticks: {
+                        stepSize: 2,
+                        font: {
+                            size: getFontSize(),
+                            family: 'Inter'
+                        }
+                    },
+                    pointLabels: {
+                        font: {
+                            size: getFontSize(),
+                            family: 'Inter'
+                        },
+                        callback: function(value) {
+                            if (window.innerWidth < 768) {
+                                const shortcuts = {
+                                    'Géométrie dans l\'espace': 'Géométrie',
+                                    'Etudes de fonctions': 'Fonctions',
+                                    'Logarithme néperien': 'Log',
+                                    'Probabilités': 'Proba'
+                                };
+                                return shortcuts[value] || value;
+                            }
+                            return value;
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        } : {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 10,
+                    ticks: {
+                        stepSize: 2,
+                        font: {
+                            size: getFontSize(),
+                            family: 'Inter'
+                        }
+                    }
+                },
+                x: {
+                    ticks: {
+                        font: {
+                            size: getFontSize(),
+                            family: 'Inter'
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    };
+
+    if (type === 'radar') {
+        config.data.datasets[0].pointBackgroundColor = 'rgb(108, 92, 231)';
+        config.data.datasets[0].pointBorderColor = '#fff';
+        config.data.datasets[0].pointHoverBackgroundColor = '#fff';
+        config.data.datasets[0].pointHoverBorderColor = 'rgb(108, 92, 231)';
+        config.data.datasets[0].pointRadius = window.innerWidth < 768 ? 2 : 4;
+        config.data.datasets[0].pointHoverRadius = window.innerWidth < 768 ? 4 : 6;
     }
 
-    .gauge-fill {
-        position: absolute;
-        top: 0;
-        left: 0;
-        height: 100%;
-        background: var(--primary-color);
-        border-radius: 15px;
-        transition: width 0.5s ease, background-color 0.5s ease;
+    return new Chart(ctx, config);
+}
+
+// Initialiser le graphique avec le type par défaut
+progressChart = initChart('radar');
+
+// Fonction pour mettre à jour les jauges
+function updateGauges(data) {
+    const themes = ['Suites', 'Probabilités', 'Convexité', 'Intégrales', 'Géométrie dans l\'espace', 'Etudes de fonctions', 'Logarithme néperien', 'Exponentielle'];
+    themes.forEach((theme, index) => {
+        const gauge = document.querySelector(`.gauge-bar[data-theme="${theme}"]`);
+        if (gauge) {
+            const value = data[index];
+            const fill = gauge.querySelector('.gauge-fill');
+            const valueDisplay = gauge.querySelector('.gauge-value');
+            
+            fill.style.width = `${(value / 10) * 100}%`;
+            fill.style.backgroundColor = getProgressColor(value);
+            valueDisplay.textContent = `${value}/10`;
+        }
+    });
+}
+
+// Fonction pour obtenir la couleur en fonction de la progression
+function getProgressColor(value) {
+    if (value <= 3) return 'var(--danger)';
+    if (value <= 6) return 'var(--warning)';
+    return 'var(--success)';
+}
+
+// Gestionnaire des boutons de visualisation
+const vizButtons = document.querySelectorAll('.viz-button');
+const radarContainer = document.getElementById('radarContainer');
+const gaugesContainer = document.getElementById('gaugesContainer');
+
+vizButtons.forEach(button => {
+    button.addEventListener('click', () => {
+        const type = button.dataset.type;
+        
+        // Mettre à jour les classes actives des boutons
+        vizButtons.forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+        
+        // Afficher/masquer les conteneurs appropriés
+        if (type === 'radar') {
+            radarContainer.style.display = 'block';
+            gaugesContainer.style.display = 'none';
+            currentType = 'radar';
+        } else {
+            radarContainer.style.display = 'none';
+            gaugesContainer.style.display = 'block';
+            currentType = 'gauge';
+            updateGauges({{ progress_data|tojson }});
+        }
+    });
+});
+
+// Fonction pour mettre à jour les visualisations
+function updateVisualizations(newData) {
+    if (currentType === 'radar') {
+        progressChart.data.datasets[0].data = newData;
+        progressChart.update();
+    } else {
+        updateGauges(newData);
     }
+}
 
-    .gauge-value {
-        position: absolute;
-        right: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: white;
-        font-family: 'Poppins', sans-serif;
-        font-weight: 600;
-        font-size: 14px;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-        z-index: 1;
-    }
+// Écouter les mises à jour de progression
+document.addEventListener('progressUpdated', function(event) {
+    updateVisualizations(event.detail.progress);
+});
 
-    @media screen and (max-width: 768px) {
-        .gauges-container {
-            width: 95%;
-            padding: 10px;
-            margin: 10px auto;
-            height: auto;
-        }
-
-        .gauge-grid {
-            gap: 15px;
-        }
-
-        .gauge-item {
-            flex-direction: column;
-            gap: 5px;
-            align-items: stretch;
-        }
-
-        .gauge-label {
-            flex: none;
-            width: 100%;
-            text-align: left;
-            font-size: 14px;
-            margin-bottom: 2px;
-        }
-
-        .gauge-bar-container {
-            width: 100%;
-            padding: 0;
-        }
-
-        .gauge-bar {
-            height: 25px;
-            width: 100%;
-        }
-
-        .gauge-value {
-            font-size: 12px;
-            right: 8px;
-        }
-
-        #gaugesContainer {
-            display: none;
-        }
-
-        #gaugesContainer.active {
-            display: block;
-        }
-
-        #radarContainer {
-            display: none;
-        }
-
-        #radarContainer.active {
-            display: block;
-        }
-    }
-    </style>
-</body>
-</html> 
+// Initialiser les jauges avec les données initiales
+updateGauges({{ progress_data|tojson }});
+</script>
+{% endblock %} 

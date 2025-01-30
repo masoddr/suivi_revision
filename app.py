@@ -70,11 +70,37 @@ def logout():
 @app.route('/')
 @login_required
 def accueil():
+    # Récupérer les statistiques
+    user_exercises = Exercice.query.filter_by(user_id=current_user.id).all()
+    total_count = len(user_exercises)
+    completed_count = sum(1 for ex in user_exercises if ex.complete)
+    
+    # Calculer le meilleur thème
     themes = ['Suites', 'Probabilités', 'Convexité', 'Intégrales', 
              'Géométrie dans l\'espace', 'Etudes de fonctions', 
              'Logarithme néperien', 'Exponentielle']
+    
+    theme_scores = {}
+    for theme in themes:
+        theme_exercises = Exercice.query.filter(
+            Exercice.user_id == current_user.id,
+            Exercice.themes.like(f'%{theme}%')
+        ).all()
+        
+        if theme_exercises:
+            completion_rate = sum(1 for ex in theme_exercises if ex.complete) / len(theme_exercises)
+            theme_scores[theme] = completion_rate
+    
+    best_theme = max(theme_scores.items(), key=lambda x: x[1])[0] if theme_scores else "Aucun"
+    
+    # Calculer les données de progression
     progress_data = calculate_progress(current_user.id)
-    return render_template('accueil.html', progress_data=progress_data, themes=themes)
+    
+    return render_template('accueil.html',
+                         progress_data=progress_data,
+                         total_count=total_count,
+                         completed_count=completed_count,
+                         best_theme=best_theme)
 
 @app.route('/exercices')
 @login_required

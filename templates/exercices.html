@@ -1,109 +1,92 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Liste des exercices</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <div class="nav-bar">
-        <h1>Exercices</h1>
-        <div class="nav-links">
-            <a href="{{ url_for('accueil') }}" class="nav-link">
-                <span class="nav-icon">📊</span>
-                <span class="nav-text">Accueil</span>
-            </a>
-            <button id="resetButton" class="nav-link">
-                <span class="nav-icon">🔄</span>
-                <span class="nav-text">Réinitialiser</span>
+{% extends "base.html" %}
+
+{% block title %}Exercices - Suivi des révisions{% endblock %}
+
+{% block content %}
+<div class="exercises-header">
+    <h1>Mes Exercices</h1>
+    <button id="resetButton" class="btn btn-danger">
+        <i class="bi bi-arrow-counterclockwise"></i>
+        <span>Réinitialiser</span>
             </button>
-            <a href="{{ url_for('logout') }}" class="nav-link">
-                <span class="nav-icon">🚪</span>
-                <span class="nav-text">Déconnexion</span>
+</div>
+
+<!-- Version Desktop -->
+<div class="card subjects-grid desktop-only">
+    {% for sujet in sujets %}
+    <div class="subject-card">
+        <div class="subject-header">
+            <h3>{{ sujet.nom }}</h3>
+            {% if sujet.lien %}
+            <a href="{{ sujet.lien }}" target="_blank" class="btn btn-primary btn-sm">
+                <i class="bi bi-file-earmark-text"></i>
+                <span>Voir le sujet</span>
             </a>
-        </div>
+            {% endif %}
     </div>
 
-    <!-- Boîte de dialogue de confirmation -->
-    <div id="confirmDialog" class="confirm-dialog">
-        <div class="confirm-content">
-            <h2>⚠️ Confirmation</h2>
-            <p>Êtes-vous sûr de vouloir réinitialiser tous vos progrès ?</p>
-            <p class="warning-text">Cette action est irréversible !</p>
-            <div class="confirm-buttons">
-                <button id="cancelReset" class="cancel-button">Annuler</button>
-                <button id="confirmReset" class="confirm-button">Réinitialiser</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Version Desktop -->
-    <div class="content-container desktop-only">
-        <table>
-            <thead>
-                <tr>
-                    <th>Sujet</th>
-                    <th>Lien</th>
-                    <th>Exercice 1</th>
-                    <th>Exercice 2</th>
-                    <th>Exercice 3</th>
-                    <th>Exercice 4</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for sujet in sujets %}
-                <tr>
-                    <td>{{ sujet.nom }}</td>
-                    <td>
-                        {% if sujet.lien %}
-                        <a href="{{ sujet.lien }}" target="_blank" class="btn-link">Voir le sujet</a>
-                        {% endif %}
-                    </td>
+        <div class="exercises-list">
                     {% for i in range(1, 5) %}
-                    <td>
                         {% set exercice = sujet.exercices.get(i) %}
                         {% if exercice %}
-                        <div class="exercice-item">
+            <div class="exercise-item">
+                <div class="exercise-check">
                             <input type="checkbox" 
+                           id="ex-{{ exercice.id }}"
                                    data-id="{{ exercice.id }}"
                                    {% if exercice.complete %}checked{% endif %}
                                    onclick="updateExercice(this)">
-                            <span class="exercice-themes">{{ exercice.themes }}</span>
+                    <label for="ex-{{ exercice.id }}">Exercice {{ i }}</label>
                         </div>
-                        {% endif %}
-                    </td>
+                <div class="exercise-themes">
+                    {% for theme in exercice.themes.split(',') %}
+                    <span class="badge">{{ theme.strip() }}</span>
                     {% endfor %}
-                </tr>
+                </div>
+            </div>
+            {% endif %}
                 {% endfor %}
-            </tbody>
-        </table>
+        </div>
+    </div>
+    {% endfor %}
     </div>
 
     <!-- Version Mobile -->
-    <div class="content-container mobile-only">
-        <div class="mobile-subjects">
+<div class="mobile-subjects mobile-only">
             {% for sujet in sujets %}
-            <div class="mobile-subject-card">
-                <div class="mobile-subject-header" onclick="toggleExercices(this)">
+    <div class="card subject-card-mobile">
+        <div class="subject-header-mobile" onclick="toggleExercices(this)">
+            <div class="header-content">
                     <h3>{{ sujet.nom }}</h3>
-                    {% if sujet.lien %}
-                    <a href="{{ sujet.lien }}" target="_blank" class="btn-link mobile-btn">Voir le sujet</a>
-                    {% endif %}
-                    <div class="toggle-icon">▼</div>
+                <div class="toggle-icon">
+                    <i class="bi bi-chevron-down"></i>
                 </div>
-                <div class="mobile-exercices-list">
+            </div>
+            {% if sujet.lien %}
+            <a href="{{ sujet.lien }}" target="_blank" class="btn btn-primary btn-sm">
+                <i class="bi bi-file-earmark-text"></i>
+                <span>Voir le sujet</span>
+            </a>
+            {% endif %}
+        </div>
+        
+        <div class="exercises-list-mobile">
                     {% for i in range(1, 5) %}
                     {% set exercice = sujet.exercices.get(i) %}
                     {% if exercice %}
-                    <div class="mobile-exercice-item">
-                        <div class="exercice-number">Exercice {{ i }}</div>
-                        <div class="exercice-item">
+            <div class="exercise-item-mobile">
+                <div class="exercise-check">
                             <input type="checkbox" 
+                           id="ex-mobile-{{ exercice.id }}"
                                    data-id="{{ exercice.id }}"
                                    {% if exercice.complete %}checked{% endif %}
                                    onclick="updateExercice(this)">
-                            <span class="exercice-themes">{{ exercice.themes }}</span>
+                    <label for="ex-mobile-{{ exercice.id }}">Exercice {{ i }}</label>
+                </div>
+                <div class="exercise-themes">
+                    {% for theme in exercice.themes.split(',') %}
+                    <span class="badge">{{ theme.strip() }}</span>
+                    {% endfor %}
                         </div>
                     </div>
                     {% endif %}
@@ -111,78 +94,303 @@
                 </div>
             </div>
             {% endfor %}
+</div>
+
+<!-- Boîte de dialogue de confirmation -->
+<div id="confirmDialog" class="dialog-overlay">
+    <div class="dialog-content">
+        <h3>Confirmation</h3>
+        <p>Êtes-vous sûr de vouloir réinitialiser votre progression ?</p>
+        <div class="dialog-buttons">
+            <button id="cancelReset" class="btn btn-secondary">Annuler</button>
+            <button id="confirmReset" class="btn btn-danger">Confirmer</button>
         </div>
     </div>
+</div>
+{% endblock %}
 
+{% block extra_css %}
+<style>
+/* En-tête de la page */
+.exercises-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.exercises-header h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--gray-800);
+}
+
+/* Grille des sujets */
+.subjects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.subject-card {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.subject-header {
+    padding: 1rem;
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.subject-header h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-800);
+}
+
+/* Liste des exercices */
+.exercises-list {
+    padding: 1rem;
+}
+
+.exercise-item {
+    padding: 0.75rem;
+    border-radius: var(--border-radius);
+    transition: background-color 0.2s ease;
+}
+
+.exercise-item:hover {
+    background-color: var(--gray-50);
+}
+
+.exercise-check {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.exercise-check input[type="checkbox"] {
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 4px;
+    border: 2px solid var(--gray-400);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.exercise-check input[type="checkbox"]:checked {
+    background-color: var(--success);
+    border-color: var(--success);
+}
+
+.exercise-check label {
+    font-weight: 500;
+    color: var(--gray-700);
+    cursor: pointer;
+}
+
+.exercise-themes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-left: 1.75rem;
+}
+
+.badge {
+    padding: 0.25rem 0.5rem;
+    background-color: var(--gray-100);
+    color: var(--gray-600);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+/* Version Mobile */
+.mobile-only {
+    display: none;
+}
+
+.subject-card-mobile {
+    margin-bottom: 1rem;
+}
+
+.subject-header-mobile {
+    padding: 1rem;
+    cursor: pointer;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.toggle-icon i {
+    transition: transform 0.3s ease;
+}
+
+.exercises-list-mobile {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.exercise-item-mobile {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--gray-200);
+}
+
+/* Boîte de dialogue */
+.dialog-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+}
+
+.dialog-overlay.show {
+    display: flex;
+}
+
+.dialog-content {
+    background: white;
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    max-width: 400px;
+    width: 90%;
+}
+
+.dialog-content h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gray-800);
+    margin-bottom: 1rem;
+}
+
+.dialog-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+/* Notifications et animations */
+.notification {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    padding: 1rem;
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    z-index: 50;
+    animation: slideIn 0.3s ease;
+}
+
+.notification.success {
+    border-left: 4px solid var(--success);
+}
+
+.notification.error {
+    border-left: 4px solid var(--danger);
+}
+
+.achievement {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    text-align: center;
+    z-index: 100;
+    animation: popIn 0.5s ease;
+}
+
+.achievement-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.achievement-message {
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: var(--gray-800);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes popIn {
+    from {
+        transform: translate(-50%, -50%) scale(0.8);
+        opacity: 0;
+    }
+    to {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+}
+
+/* Responsive */
+@media screen and (max-width: 768px) {
+    .desktop-only {
+        display: none;
+    }
+    
+    .mobile-only {
+        display: block;
+    }
+    
+    .exercises-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+    
+    .btn {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
     <script>
     function updateExercice(element) {
         const id = element.dataset.id;
         const complete = element.checked;
-        const row = element.closest('tr');
         
         if (complete) {
-            // Créer le feu d'artifice
             createFirework();
-            
-            // Messages d'encouragement aléatoires
-            const messages = [
-                "Bravo ! Continue comme ça ! 🌟",
-                "Excellent travail ! 🎉",
-                "Tu es sur la bonne voie ! 💪",
-                "Un pas de plus vers la réussite ! 🚀",
-                "Super progression ! 🌈",
-                "Tu gères ! 🏆",
-                "Continue sur ta lancée ! ⭐",
-                "Très bon travail ! 🎯"
-            ];
-            const message = messages[Math.floor(Math.random() * messages.length)];
-            
-            const notification = document.createElement('div');
-            notification.className = 'notification';
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            setTimeout(() => notification.remove(), 3000);
-        }
+        showEncouragement();
+    }
         
-        // Animer la ligne
-        row.style.backgroundColor = complete ? 'rgba(0, 184, 148, 0.1)' : '';
-        
-        fetch('/update_exercice', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                id: parseInt(id),
-                complete: complete
-            })
-        }).then(response => response.json())
-          .then(data => {
-              if (data.success) {
-                  // Mettre à jour le graphique si on est sur la même page
-                  const progressChart = window.parent.progressChart;
-                  if (progressChart && data.progress) {
-                      progressChart.data.datasets[0].data = data.progress;
-                      progressChart.update('active');
-                  }
-                  
-                  // Vérifier si l'annale est complétée
-                  const sujet = row.querySelector('td').textContent;
-                  fetch('/check_annale_complete', {
-                      method: 'POST',
-                      headers: {
-                          'Content-Type': 'application/json',
-                      },
-                      body: JSON.stringify({ sujet: sujet })
-                  })
-                  .then(response => response.json())
-                  .then(data => {
-                      if (data.complete) {
-                          showAchievement(data.message);
-                      }
-                  });
-              }
-          });
+        updateExerciceStatus(id, complete);
     }
 
     function createFirework() {
@@ -190,7 +398,6 @@
         firework.className = 'firework';
         document.body.appendChild(firework);
         
-        // Créer les particules
         for (let i = 0; i < 50; i++) {
             const particle = document.createElement('div');
             particle.className = 'particle';
@@ -202,9 +409,24 @@
             firework.appendChild(particle);
         }
         
-        // Supprimer le feu d'artifice après l'animation
         setTimeout(() => firework.remove(), 2000);
     }
+
+function showEncouragement() {
+    const messages = [
+        "Bravo ! Continue comme ça ! 🌟",
+        "Excellent travail ! 🎉",
+        "Tu es sur la bonne voie ! 💪",
+        "Un pas de plus vers la réussite ! 🚀",
+        "Super progression ! 🌈",
+        "Tu gères ! 🏆",
+        "Continue sur ta lancée ! ⭐",
+        "Très bon travail ! 🎯"
+    ];
+    const message = messages[Math.floor(Math.random() * messages.length)];
+    
+    showNotification(message);
+}
 
     function showAchievement(message) {
         const achievement = document.createElement('div');
@@ -218,9 +440,9 @@
     }
 
     function toggleExercices(element) {
-        const card = element.closest('.mobile-subject-card');
-        const exercicesList = card.querySelector('.mobile-exercices-list');
-        const toggleIcon = card.querySelector('.toggle-icon');
+    const card = element.closest('.subject-card-mobile');
+    const exercicesList = card.querySelector('.exercises-list-mobile');
+    const toggleIcon = card.querySelector('.toggle-icon i');
         
         if (exercicesList.style.maxHeight) {
             exercicesList.style.maxHeight = null;
@@ -231,536 +453,109 @@
         }
     }
 
-    // Gestionnaires d'événements pour la réinitialisation
-    const resetButton = document.getElementById('resetButton');
-    const confirmDialog = document.getElementById('confirmDialog');
-    const cancelReset = document.getElementById('cancelReset');
-    const confirmReset = document.getElementById('confirmReset');
-
-    resetButton.addEventListener('click', () => {
-        confirmDialog.classList.add('show');
-    });
-
-    cancelReset.addEventListener('click', () => {
-        confirmDialog.classList.remove('show');
-    });
-
-    confirmReset.addEventListener('click', () => {
-        confirmDialog.classList.remove('show');
-        resetProgress();
-    });
-
-    // Fermer la boîte de dialogue en cliquant en dehors
-    confirmDialog.addEventListener('click', (e) => {
-        if (e.target === confirmDialog) {
-            confirmDialog.classList.remove('show');
-        }
-    });
-
-    // Fonction de réinitialisation
-    function resetProgress() {
-        fetch('/reset_progress', {
+    function updateExerciceStatus(exerciceId, complete) {
+        fetch('/update_exercice', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-            }
+            },
+            body: JSON.stringify({
+                id: exerciceId,
+                complete: complete
+            })
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Décocher toutes les cases à cocher
-                document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-                    checkbox.checked = false;
+                // Déclencher l'événement de mise à jour de la progression
+                const event = new CustomEvent('progressUpdated', {
+                    detail: {
+                        progress: data.progress
+                    }
                 });
+                document.dispatchEvent(event);
                 
-                // Afficher une notification de succès
-                showNotification("Réinitialisation effectuée avec succès !");
-                
-                // Mettre à jour les compteurs d'exercices
-                updateAllCounters();
-            } else {
-                showNotification("Erreur lors de la réinitialisation.", true);
+                // Vérifier si l'annale est complète
+                checkAnnaleComplete(exerciceId);
             }
         })
-        .catch(error => {
-            console.error('Erreur:', error);
+        .catch(error => console.error('Erreur:', error));
+    }
+
+function checkAnnaleComplete(exerciceId) {
+    const row = document.querySelector(`input[data-id="${exerciceId}"]`).closest('tr');
+    const sujet = row.querySelector('td').textContent;
+    
+    fetch('/check_annale_complete', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ sujet: sujet })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.complete) {
+            showAchievement(data.message);
+        }
+    });
+}
+
+function showNotification(message, isError = false) {
+    const notification = document.createElement('div');
+    notification.className = `notification ${isError ? 'error' : 'success'}`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 3000);
+}
+
+// Gestionnaires d'événements pour la réinitialisation
+const resetButton = document.getElementById('resetButton');
+const confirmDialog = document.getElementById('confirmDialog');
+const cancelReset = document.getElementById('cancelReset');
+const confirmReset = document.getElementById('confirmReset');
+
+resetButton.addEventListener('click', () => {
+    confirmDialog.classList.add('show');
+});
+
+cancelReset.addEventListener('click', () => {
+    confirmDialog.classList.remove('show');
+});
+
+confirmReset.addEventListener('click', () => {
+    confirmDialog.classList.remove('show');
+    resetProgress();
+});
+
+confirmDialog.addEventListener('click', (e) => {
+    if (e.target === confirmDialog) {
+        confirmDialog.classList.remove('show');
+    }
+});
+
+function resetProgress() {
+    fetch('/reset_progress', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            showNotification("Réinitialisation effectuée avec succès !");
+        } else {
             showNotification("Erreur lors de la réinitialisation.", true);
-        });
-    }
-
-    // Fonction pour afficher une notification
-    function showNotification(message, isError = false) {
-        const notification = document.createElement('div');
-        notification.className = `notification ${isError ? 'error' : 'success'}`;
-        notification.textContent = message;
-        document.body.appendChild(notification);
-        setTimeout(() => notification.remove(), 3000);
-    }
-
-    // Fonction pour mettre à jour tous les compteurs
-    function updateAllCounters() {
-        document.querySelectorAll('.exercice-counter').forEach(counter => {
-            counter.textContent = '0';
-        });
-    }
-    </script>
-
-    <style>
-    .checkmark-animation {
-        position: absolute;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background-color: var(--success-color);
-        animation: checkmark 0.8s ease-out forwards;
-    }
-
-    @keyframes checkmark {
-        0% { transform: scale(0); opacity: 1; }
-        100% { transform: scale(2); opacity: 0; }
-    }
-
-    .firework {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 0;
-        height: 0;
-        pointer-events: none;
-        z-index: 9999;
-    }
-
-    .particle {
-        position: absolute;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        transform-origin: center;
-        background: currentColor;
-        color: hsl(var(--hue), 100%, 75%);
-        animation: explode 2s ease-out forwards;
-        box-shadow: 0 0 10px currentColor;
-    }
-
-    @keyframes explode {
-        0% {
-            transform: rotate(var(--angle)) translateY(0) scale(1);
-            opacity: 1;
         }
-        50% {
-            opacity: 1;
-        }
-        100% {
-            transform: rotate(var(--angle)) translateY(calc(var(--velocity) * 200px)) scale(0);
-            opacity: 0;
-        }
-    }
-
-    /* Ajout d'un effet de traînée */
-    .particle::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        border-radius: 50%;
-        background: inherit;
-        filter: blur(4px);
-        animation: trail 1s ease-out forwards;
-    }
-
-    @keyframes trail {
-        from { transform: scale(1); opacity: 1; }
-        to { transform: scale(3); opacity: 0; }
-    }
-
-    .notification {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        padding: 20px 40px;
-        background: linear-gradient(45deg, var(--primary-color), var(--hover-color));
-        color: white;
-        border-radius: 15px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-        animation: popIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-        font-size: 24px;
-        font-weight: 600;
-        text-align: center;
-        z-index: 1000;
-    }
-
-    @keyframes popIn {
-        0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
-        50% { transform: translate(-50%, -50%) scale(1.2); }
-        100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-    }
-
-    .achievement {
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: linear-gradient(45deg, #ffd700, #ffa500);
-        padding: 20px;
-        border-radius: 15px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-        display: flex;
-        align-items: center;
-        gap: 15px;
-        animation: dropIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-        z-index: 1000;
-    }
-
-    .achievement-icon {
-        font-size: 40px;
-    }
-
-    .achievement-message {
-        color: white;
-        font-size: 20px;
-        font-weight: 600;
-    }
-
-    @keyframes dropIn {
-        0% { transform: translateX(-50%) translateY(-100%); }
-        70% { transform: translateX(-50%) translateY(20px); }
-        100% { transform: translateX(-50%) translateY(0); }
-    }
-
-    /* Styles pour la version responsive */
-    @media screen and (max-width: 768px) {
-        .nav-bar {
-            flex-direction: column;
-            padding: 10px;
-            gap: 10px;
-        }
-
-        .nav-bar h1 {
-            font-size: 24px;
-            margin: 0;
-            text-align: center;
-        }
-
-        .nav-links {
-            width: 100%;
-            justify-content: center;
-            gap: 10px;
-            display: flex;
-            flex-wrap: wrap;
-        }
-
-        .nav-link {
-            font-size: 14px;
-            padding: 8px 12px;
-            flex: 0 1 auto;
-            min-width: 100px;
-            max-width: 130px;
-        }
-
-        .nav-text {
-            font-size: 13px;
-        }
-
-        /* Animation tactile pour mobile */
-        .nav-link:active::before {
-            transform: translateX(100%) rotate(45deg);
-        }
-
-        .nav-link:active .nav-icon {
-            transform: scale(1.2);
-        }
-
-        .nav-link:active .nav-text::after {
-            transform: scaleX(1);
-        }
-
-        /* Ajustements pour le bouton "Voir le sujet" en mobile */
-        .mobile-btn {
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
-
-        .mobile-btn:active {
-            transform: translateY(1px);
-        }
-
-        .mobile-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(45deg, rgba(255,255,255,0.1), rgba(255,255,255,0.2));
-            transform: translateX(-100%) rotate(45deg);
-            transition: transform 0.6s ease;
-        }
-
-        .mobile-btn:active::before {
-            transform: translateX(100%) rotate(45deg);
-        }
-
-        .desktop-only {
-            display: none;
-        }
-
-        .mobile-only {
-            display: block;
-        }
-
-        .mobile-subject-card {
-            background: white;
-            border-radius: 10px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-
-        .mobile-subject-header {
-            padding: 15px;
-            background: linear-gradient(45deg, var(--primary-color), var(--hover-color));
-            color: white;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
-            position: relative;
-        }
-
-        .mobile-subject-header h3 {
-            margin: 0;
-            font-size: 16px;
-            flex: 1;
-        }
-
-        .mobile-btn {
-            padding: 5px 10px;
-            font-size: 14px;
-            margin-left: 10px;
-            white-space: nowrap;
-            background: white;
-            color: var(--primary-color);
-        }
-
-        .toggle-icon {
-            margin-left: 10px;
-            transition: transform 0.3s ease;
-        }
-
-        .mobile-exercices-list {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease-out;
-        }
-
-        .mobile-exercice-item {
-            padding: 15px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .mobile-exercice-item:last-child {
-            border-bottom: none;
-        }
-
-        .exercice-number {
-            font-weight: 600;
-            margin-bottom: 5px;
-            color: var(--primary-color);
-        }
-
-        .exercice-themes {
-            font-size: 14px;
-        }
-    }
-
-    @media screen and (min-width: 769px) {
-        .desktop-only {
-            display: block;
-        }
-
-        .mobile-only {
-            display: none;
-        }
-    }
-
-    /* Styles pour la navigation interactive */
-    .nav-link {
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        padding: 8px 16px;
-        background: linear-gradient(45deg, var(--primary-color), var(--hover-color));
-        color: white;
-        text-decoration: none;
-        border-radius: 12px;
-        transition: all 0.3s ease;
-        overflow: hidden;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        text-align: center;
-        min-width: 120px;
-    }
-
-    .nav-link::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(45deg, rgba(255,255,255,0.1), rgba(255,255,255,0.2));
-        transform: translateX(-100%) rotate(45deg);
-        transition: transform 0.6s ease;
-    }
-
-    .nav-link:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    }
-
-    .nav-link:hover::before {
-        transform: translateX(100%) rotate(45deg);
-    }
-
-    .nav-link:active {
-        transform: translateY(1px);
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .nav-text {
-        position: relative;
-        white-space: nowrap;
-        text-align: center;
-        flex: 0 0 auto;
-    }
-
-    .nav-text::after {
-        content: '';
-        position: absolute;
-        bottom: -2px;
-        left: 0;
-        width: 100%;
-        height: 2px;
-        background: white;
-        transform: scaleX(0);
-        transition: transform 0.3s ease;
-        transform-origin: right;
-    }
-
-    .nav-link:hover .nav-text::after {
-        transform: scaleX(1);
-        transform-origin: left;
-    }
-
-    .nav-icon {
-        font-size: 1.2em;
-        transition: transform 0.3s ease;
-        flex: 0 0 auto;
-    }
-
-    .confirm-dialog {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-    }
-
-    .confirm-dialog.show {
-        display: flex;
-    }
-
-    .confirm-content {
-        background: white;
-        padding: 30px;
-        border-radius: 15px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-        text-align: center;
-        max-width: 90%;
-        width: 400px;
-    }
-
-    .confirm-content h2 {
-        margin: 0 0 20px 0;
-        color: #ff6b6b;
-    }
-
-    .warning-text {
-        color: #ff6b6b;
-        font-weight: 600;
-        margin: 20px 0;
-    }
-
-    .confirm-buttons {
-        display: flex;
-        justify-content: center;
-        gap: 15px;
-        margin-top: 25px;
-    }
-
-    .cancel-button, .confirm-button {
-        padding: 10px 20px;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        font-family: 'Poppins', sans-serif;
-        font-size: 14px;
-        transition: all 0.3s ease;
-    }
-
-    .cancel-button {
-        background: #f1f3f5;
-        color: #495057;
-    }
-
-    .confirm-button {
-        background: #ff6b6b;
-        color: white;
-    }
-
-    .cancel-button:hover, .confirm-button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-
-    .notification {
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        padding: 15px 30px;
-        border-radius: 12px;
-        color: white;
-        font-family: 'Poppins', sans-serif;
-        font-weight: 500;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        animation: slideIn 0.3s ease-out;
-        z-index: 1000;
-    }
-
-    .notification.success {
-        background: linear-gradient(45deg, #37b24d, #40c057);
-    }
-
-    .notification.error {
-        background: linear-gradient(45deg, #f03e3e, #ff6b6b);
-    }
-
-    @keyframes slideIn {
-        from { transform: translateX(-50%) translateY(-100%); opacity: 0; }
-        to { transform: translateX(-50%) translateY(0); opacity: 1; }
-    }
-    </style>
-</body>
-</html> 
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showNotification("Erreur lors de la réinitialisation.", true);
+    });
+}
+</script>
+{% endblock %} 

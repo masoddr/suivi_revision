@@ -104,10 +104,17 @@
         .flash-message {
             padding: 0.75rem 1rem;
             border-radius: var(--border-radius);
-            background-color: var(--danger);
             color: white;
             font-size: 0.875rem;
             margin-bottom: 0.5rem;
+        }
+
+        .flash-message.error {
+            background-color: var(--danger);
+        }
+
+        .flash-message.success {
+            background-color: #22c55e;
         }
     </style>
 </head>
@@ -119,11 +126,11 @@
                 <p>Connectez-vous pour accéder à votre suivi</p>
             </div>
             
-            {% with messages = get_flashed_messages() %}
+            {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                 <div class="flash-messages">
-                    {% for message in messages %}
-                    <div class="flash-message">{{ message }}</div>
+                    {% for category, message in messages %}
+                    <div class="flash-message {{ category }}">{{ message }}</div>
                     {% endfor %}
                 </div>
                 {% endif %}

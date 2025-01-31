@@ -8,6 +8,8 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'revisions.db')
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'votre_clé_secrète_ici')
+# Code d'inscription requis
+REGISTRATION_CODE = "MPSI2324"  # Vous pouvez changer ce code selon vos besoins
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
@@ -43,7 +45,7 @@ def login():
             login_user(user)
             return redirect(url_for('accueil'))
         else:
-            flash('Nom d\'utilisateur ou mot de passe incorrect')
+            flash('Nom d\'utilisateur ou mot de passe incorrect', 'error')
     
     return render_template('login.html')
 
@@ -52,9 +54,15 @@ def register():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
+        registration_code = request.form.get('registration_code')
+        
+        # Vérifier le code d'inscription
+        if registration_code != REGISTRATION_CODE:
+            flash('Code d\'inscription invalide', 'error')
+            return redirect(url_for('register'))
         
         if User.query.filter_by(username=username).first():
-            flash('Nom d\'utilisateur déjà pris')
+            flash('Nom d\'utilisateur déjà pris', 'error')
             return redirect(url_for('register'))
             
         # Créer l'utilisateur
@@ -63,8 +71,8 @@ def register():
         db.session.add(user)
         db.session.commit()
         
-        # Récupérer les exercices de référence (ceux créés dans init_db)
-        reference_exercises = Exercice.query.filter_by(user_id=1).all()  # Supposant que l'ID 1 est l'utilisateur de référence
+        # Récupérer les exercices de référence
+        reference_exercises = Exercice.query.filter_by(user_id=1).all()
         
         # Copier les exercices pour le nouvel utilisateur
         for ref_ex in reference_exercises:
@@ -79,6 +87,7 @@ def register():
             db.session.add(new_ex)
         
         db.session.commit()
+        flash('Compte créé avec succès ! Vous pouvez maintenant vous connecter.', 'success')
         return redirect(url_for('login'))
     return render_template('register.html')
 

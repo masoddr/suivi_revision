@@ -1,23 +1,152 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
-    <title>Connexion</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - Suivi des révisions</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <style>
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--gray-100);
+        }
+        
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            padding: 2rem;
+        }
+        
+        .login-card {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg);
+            padding: 2rem;
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .login-header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--gray-800);
+            margin-bottom: 0.5rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            transition: border-color 0.2s ease;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .btn-login {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        
+        .btn-login:hover {
+            background-color: var(--primary-dark);
+        }
+        
+        .register-link {
+            text-align: center;
+            margin-top: 1rem;
+        }
+        
+        .register-link a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .register-link a:hover {
+            text-decoration: underline;
+        }
+        
+        .flash-messages {
+            margin-bottom: 1rem;
+        }
+        
+        .flash-message {
+            padding: 0.75rem 1rem;
+            border-radius: var(--border-radius);
+            background-color: var(--danger);
+            color: white;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
 </head>
 <body>
-    <div class="auth-container">
-        <h1>Connexion</h1>
-        <form method="POST">
-            <div class="form-group">
-                <input type="text" name="username" placeholder="Nom d'utilisateur" required>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h1>Connexion</h1>
+                <p>Connectez-vous pour accéder à votre suivi</p>
             </div>
-            <div class="form-group">
-                <input type="password" name="password" placeholder="Mot de passe" required>
+            
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                <div class="flash-messages">
+                    {% for message in messages %}
+                    <div class="flash-message">{{ message }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endwith %}
+            
+            <form method="POST" action="{{ url_for('login') }}">
+                <div class="form-group">
+                    <label for="username">Nom d'utilisateur</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Mot de passe</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                
+                <button type="submit" class="btn-login">Se connecter</button>
+            </form>
+            
+            <div class="register-link">
+                <p>Pas encore de compte ? <a href="{{ url_for('register') }}">S'inscrire</a></p>
             </div>
-            <button type="submit" class="btn-gradient">Se connecter</button>
-        </form>
-        <p class="auth-link">Pas encore de compte ? <a href="{{ url_for('register') }}">S'inscrire</a></p>
+        </div>
     </div>
 </body>
 </html> 

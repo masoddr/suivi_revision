@@ -36,12 +36,15 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
+        
         user = User.query.filter_by(username=username).first()
         
         if user and check_password_hash(user.password_hash, password):
             login_user(user)
             return redirect(url_for('accueil'))
-        flash('Identifiants invalides')
+        else:
+            flash('Nom d\'utilisateur ou mot de passe incorrect')
+    
     return render_template('login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -54,9 +57,27 @@ def register():
             flash('Nom d\'utilisateur déjà pris')
             return redirect(url_for('register'))
             
+        # Créer l'utilisateur
         user = User(username=username, 
                    password_hash=generate_password_hash(password))
         db.session.add(user)
+        db.session.commit()
+        
+        # Récupérer les exercices de référence (ceux créés dans init_db)
+        reference_exercises = Exercice.query.filter_by(user_id=1).all()  # Supposant que l'ID 1 est l'utilisateur de référence
+        
+        # Copier les exercices pour le nouvel utilisateur
+        for ref_ex in reference_exercises:
+            new_ex = Exercice(
+                user_id=user.id,
+                sujet=ref_ex.sujet,
+                numero=ref_ex.numero,
+                themes=ref_ex.themes,
+                lien=ref_ex.lien,
+                complete=False
+            )
+            db.session.add(new_ex)
+        
         db.session.commit()
         return redirect(url_for('login'))
     return render_template('register.html')
@@ -70,8 +91,10 @@ def logout():
 @app.route('/')
 @login_required
 def accueil():
-    # Récupérer les statistiques
+    # Récupérer tous les exercices de l'utilisateur
     user_exercises = Exercice.query.filter_by(user_id=current_user.id).all()
+    
+    # Le total est le nombre réel d'exercices disponibles
     total_count = len(user_exercises)
     completed_count = sum(1 for ex in user_exercises if ex.complete)
     
@@ -82,25 +105,32 @@ def accueil():
     
     theme_scores = {}
     for theme in themes:
-        theme_exercises = Exercice.query.filter(
-            Exercice.user_id == current_user.id,
-            Exercice.themes.like(f'%{theme}%')
-        ).all()
-        
+        theme_exercises = [ex for ex in user_exercises if theme in ex.themes]
         if theme_exercises:
             completion_rate = sum(1 for ex in theme_exercises if ex.complete) / len(theme_exercises)
             theme_scores[theme] = completion_rate
     
     best_theme = max(theme_scores.items(), key=lambda x: x[1])[0] if theme_scores else "Aucun"
     
-    # Calculer les données de progression
-    progress_data = calculate_progress(current_user.id)
+    # Calculer les données de progression par thème
+    progress_data = []
+    for theme in themes:
+        theme_exercises = [ex for ex in user_exercises if theme in ex.themes]
+        if theme_exercises:
+            theme_completion = sum(1 for ex in theme_exercises if ex.complete)
+            progress_data.append(theme_completion)
+        else:
+            progress_data.append(0)
+    
+    # Éviter la division par zéro dans le template
+    percentage = round((completed_count / total_count * 100)) if total_count > 0 else 0
     
     return render_template('accueil.html',
                          progress_data=progress_data,
                          total_count=total_count,
                          completed_count=completed_count,
-                         best_theme=best_theme)
+                         best_theme=best_theme,
+                         percentage=percentage)
 
 @app.route('/exercices')
 @login_required

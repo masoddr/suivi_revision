@@ -14,7 +14,7 @@
             <div class="progress-bar" style="width: {{ (completed_count/total_count * 100)|round }}%"></div>
         </div>
     </div>
-
+    
     <div class="card stat-card">
         <div class="stat-header">
             <i class="bi bi-trophy"></i>
@@ -22,7 +22,7 @@
         </div>
         <div class="value">{{ (completed_count/total_count * 100)|round }}%</div>
     </div>
-
+    
     <div class="card stat-card">
         <div class="stat-header">
             <i class="bi bi-lightning"></i>
@@ -36,7 +36,7 @@
     <div class="charts-grid">
         <div class="card">
             <div class="card-header">
-                <h2>Progression par thème (Radar)</h2>
+                <h2>Progression par thème</h2>
             </div>
             <div id="radarContainer" class="chart-wrapper">
                 <canvas id="progressChart"></canvas>
@@ -45,7 +45,7 @@
 
         <div class="card">
             <div class="card-header">
-                <h2>Progression par thème (Jauges)</h2>
+                <h2>Progression par thème</h2>
             </div>
             <div class="gauges-container">
                 {% for theme in ['Suites', 'Probabilités', 'Convexité', 'Intégrales', 'Géométrie dans l\'espace', 'Etudes de fonctions', 'Logarithme néperien', 'Exponentielle'] %}
@@ -220,27 +220,27 @@ function getFontSize() {
 // Fonction pour initialiser le graphique radar
 function initRadarChart() {
     const config = {
-        type: 'radar',
-        data: {
+            type: 'radar',
+            data: {
             labels: ['Suites', 'Probabilités', 'Convexité', 'Intégrales', 'Géométrie dans l\'espace', 'Etudes de fonctions', 'Logarithme néperien', 'Exponentielle'],
-            datasets: [{
+                datasets: [{
                 label: 'Progression',
-                data: {{ progress_data|tojson }},
-                backgroundColor: 'rgba(108, 92, 231, 0.2)',
-                borderColor: 'rgb(108, 92, 231)',
+                    data: {{ progress_data|tojson }},
+                    backgroundColor: 'rgba(108, 92, 231, 0.2)',
+                    borderColor: 'rgb(108, 92, 231)',
                 borderWidth: 2,
                 fill: true,
-                pointBackgroundColor: 'rgb(108, 92, 231)',
-                pointBorderColor: '#fff',
-                pointHoverBackgroundColor: '#fff',
-                pointHoverBorderColor: 'rgb(108, 92, 231)',
+                    pointBackgroundColor: 'rgb(108, 92, 231)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgb(108, 92, 231)',
                 pointRadius: window.innerWidth < 768 ? 2 : 4,
                 pointHoverRadius: window.innerWidth < 768 ? 4 : 6
-            }]
-        },
-        options: {
-            scales: {
-                r: {
+                }]
+            },
+            options: {
+                scales: {
+                    r: {
                     angleLines: {
                         display: true
                     },
@@ -302,8 +302,8 @@ function initBarChart() {
             indexAxis: 'y',
             scales: {
                 x: {
-                    beginAtZero: true,
-                    max: 10,
+                        beginAtZero: true,
+                        max: 10,
                     grid: {
                         color: 'rgba(0, 0, 0, 0.1)'
                     },
@@ -357,8 +357,9 @@ barChart = initBarChart();
 
 // Fonction pour mettre à jour les statistiques
 function updateStats(data) {
-    const total = data.length * 10; // 10 exercices max par thème
-    const completed = data.reduce((sum, val) => sum + val, 0);
+    // Utiliser le total_count fourni par le serveur directement
+    const total = {{ total_count }};
+    const completed = {{ completed_count }};
     const percentage = Math.round((completed / total) * 100);
     
     // Mettre à jour le compteur d'exercices
@@ -423,5 +424,5 @@ document.addEventListener('progressUpdated', function(event) {
 // Initialiser les visualisations avec les données initiales
 const initialData = {{ progress_data|tojson }};
 updateVisualizations(initialData);
-</script>
+    </script>
 {% endblock %} 

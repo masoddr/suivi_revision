@@ -1,8 +1,5 @@
 # 📚 Suivi des Révisions BAC
 
-## 🌐 Accès au site
-Le site est accessible à l'adresse : https://suivi-bac.onrender.com
-
 ## 👤 Comment utiliser
 1. Créez un compte avec votre adresse email
 2. Connectez-vous
